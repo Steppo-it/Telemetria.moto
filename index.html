@@ -9,77 +9,92 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
-    --asphalt: #0A0C0F;
-    --panel: #14171C;
-    --panel-edge: #23272E;
-    --cyan: #00E5D4;
-    --amber: #FF8A1E;
+    --map-pct: 68%;
+    --bg: #050A14;
+    --panel: #0A1526;
+    --panel-edge: #17283F;
+    --blue: #2E8EFF;
+    --blue-dim: #1C5FB8;
+    --blue-glow: #5CC8FF;
+    --amber: #FF9A3D;
     --red: #FF4436;
-    --green: #4CD97B;
-    --text: #E9EDF1;
-    --muted: #6B7480;
+    --green: #35D48A;
+    --text: #E7F0FF;
+    --muted: #5C7699;
     --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
-    --disp: 'Bebas Neue', 'Oswald', sans-serif;
+    --disp: 'Orbitron', 'Bebas Neue', sans-serif;
   }
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin:0; padding:0; height:100%;
-    background: var(--asphalt);
+    background: var(--bg);
     color: var(--text);
     font-family: 'Inter', sans-serif;
     overscroll-behavior: none;
     user-select: none;
   }
   body {
+    position:relative;
     display:flex; flex-direction:column;
     min-height:100vh;
     padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     overflow: hidden;
+  }
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(rgba(46,142,255,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(46,142,255,.055) 1px, transparent 1px);
+    background-size: 26px 26px;
   }
 
   .rotate-hint { display:none; }
   @media (orientation: portrait) {
     .rotate-hint {
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:14px; height:100vh; text-align:center; padding: 0 30px;
+      gap:14px; height:100vh; text-align:center; padding: 0 30px; position:relative; z-index:1;
     }
-    .rotate-hint svg { width:64px; height:64px; opacity:.6; animation: rotatePulse 1.8s ease-in-out infinite; }
+    .rotate-hint svg { width:64px; height:64px; opacity:.7; animation: rotatePulse 1.8s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(92,200,255,.5)); }
     .rotate-hint p { font-family: var(--mono); font-size:13px; color: var(--muted); max-width:260px; line-height:1.5; margin:0; }
     .app { display:none; }
   }
   @keyframes rotatePulse { 0%,100%{ transform:rotate(0deg); } 50%{ transform:rotate(90deg); } }
 
-  .app { display:flex; flex-direction:column; height:100vh; }
+  .app { position:relative; z-index:1; display:flex; flex-direction:column; height:100vh; }
 
   .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px; flex: 0 0 auto; }
-  .brand { font-family: var(--disp); font-size: 16px; letter-spacing: 1.4px; color: var(--text); }
-  .brand span { color: var(--cyan); }
+  .brand { font-family: var(--disp); font-weight:700; font-size: 15px; letter-spacing: 2px; color: var(--text); text-shadow: 0 0 12px rgba(46,142,255,.5); }
+  .brand span { color: var(--blue-glow); }
   .status-dot { width:7px; height:7px; border-radius:50%; background: var(--muted); transition: all .3s; }
   .status-dot.live { background: var(--red); box-shadow: 0 0 10px 2px rgba(255,68,54,.6); animation: pulse 1.4s infinite; }
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
-  .status-row { display:flex; align-items:center; gap:6px; font-family: var(--mono); font-size:10px; color: var(--muted); }
+  .status-row { display:flex; align-items:center; gap:6px; font-family: var(--mono); font-size:10px; color: var(--muted); letter-spacing:.5px; }
 
   .perm-note {
     font-size: 9px; color: var(--muted); line-height:1.3;
     background: var(--panel); border:1px solid var(--panel-edge);
     border-radius: 7px; padding: 5px 9px; margin-bottom: 5px; flex: 0 0 auto;
+    box-shadow: 0 0 0 1px rgba(46,142,255,.05) inset;
   }
-  .perm-note b { color: var(--text); }
+  .perm-note b { color: var(--blue-glow); }
 
   .layout { display:flex; flex-direction:row; gap:8px; flex: 1 1 auto; min-height:0; }
 
   /* --- big forward-facing road map --- */
   .col-map {
-    flex: 1 1 auto; min-width:0; position:relative;
+    flex: 0 0 var(--map-pct); min-width:0; position:relative;
     border-radius: 12px; overflow:hidden; background: var(--panel);
     border: 1px solid var(--panel-edge);
+    box-shadow: 0 0 0 1px rgba(46,142,255,.06) inset, 0 0 22px rgba(46,142,255,.08);
+    transition: flex-basis .25s ease;
   }
   .map-rotator {
     position:absolute; top:-25%; left:-25%; width:150%; height:150%;
     transform: rotate(0deg); transform-origin:center center;
     transition: transform .25s linear;
+    filter: saturate(.75) brightness(.85) hue-rotate(-6deg);
   }
   #leafletMap { width:100%; height:100%; background: var(--panel); }
   .map-arrow {
@@ -87,60 +102,68 @@
     width:0; height:0; z-index:400; pointer-events:none;
     border-left: 11px solid transparent; border-right: 11px solid transparent;
     border-bottom: 22px solid var(--amber);
-    filter: drop-shadow(0 0 6px rgba(255,138,30,.7));
+    filter: drop-shadow(0 0 7px rgba(255,154,61,.8));
   }
   .map-arrow::after {
     content:''; position:absolute; left:-11px; top:22px;
-    width:22px; height:8px; background: var(--amber); border-radius:0 0 4px 4px;
-    opacity:.85;
+    width:22px; height:8px; background: var(--amber); border-radius:0 0 4px 4px; opacity:.85;
   }
   .map-badge {
     position:absolute; top:8px; left:8px; z-index:401;
-    background: rgba(10,12,15,.72); border:1px solid var(--panel-edge);
+    background: rgba(5,10,20,.75); border:1px solid var(--panel-edge);
     border-radius: 7px; padding: 4px 8px;
     font-family: var(--mono); font-size: 10px; color: var(--text);
+    box-shadow: 0 0 10px rgba(46,142,255,.15);
   }
-  .map-badge b { color: var(--cyan); }
-  .map-attrib {
-    position:absolute; bottom:5px; right:8px; z-index:401;
-    font-family: var(--mono); font-size: 8px; color: rgba(233,237,241,.5);
+  .map-badge b { color: var(--blue-glow); }
+  .map-size-ctrl {
+    position:absolute; top:8px; right:8px; z-index:401; display:flex; gap:3px;
+    background: rgba(5,10,20,.75); border:1px solid var(--panel-edge); border-radius: 7px; padding: 3px;
   }
+  .map-size-ctrl button {
+    appearance:none; border:none; background:transparent; color: var(--muted);
+    font-family: var(--mono); font-size: 9px; font-weight:600; padding: 3px 7px; border-radius: 5px; cursor:pointer;
+  }
+  .map-size-ctrl button.active { background: var(--blue); color: #04101F; box-shadow: 0 0 8px rgba(46,142,255,.6); }
+  .map-attrib { position:absolute; bottom:5px; right:8px; z-index:401; font-family: var(--mono); font-size: 8px; color: rgba(231,240,255,.4); }
   .map-empty {
     position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center;
-    background: var(--asphalt); font-family: var(--mono); font-size: 11px; color: var(--muted); text-align:center; padding:10px;
+    background: var(--bg); font-family: var(--mono); font-size: 11px; color: var(--muted); text-align:center; padding:10px;
   }
 
   /* --- right HUD column --- */
-  .col-hud { flex: 0 0 min(30vw, 224px); min-width:0; display:flex; flex-direction:column; gap:5px; }
+  .col-hud { flex: 1 1 auto; min-width: 118px; display:flex; flex-direction:column; gap:5px; }
 
   .horizon-wrap {
     position:relative; width: min(15vw, 92px); aspect-ratio: 1/1; margin: 0 auto;
     border-radius: 50%; background: var(--panel); border: 1px solid var(--panel-edge); overflow:hidden;
-    box-shadow: inset 0 0 30px rgba(0,0,0,.6);
+    box-shadow: inset 0 0 30px rgba(0,0,0,.6), 0 0 14px rgba(46,142,255,.18);
   }
   .horizon-wrap svg { display:block; width:100%; height:100%; }
   .lean-readout { position:absolute; top:50%; left:50%; transform: translate(-50%,-50%); text-align:center; pointer-events:none; z-index:5; }
-  .lean-num { font-family: var(--mono); font-weight:700; font-size: 18px; line-height:1; color: var(--cyan); transition: color .2s; }
-  .lean-num.warn { color: var(--amber); }
-  .lean-num.danger { color: var(--red); }
+  .lean-num { font-family: var(--disp); font-weight:700; font-size: 17px; line-height:1; color: var(--blue-glow); text-shadow: 0 0 10px rgba(92,200,255,.6); transition: color .2s; }
+  .lean-num.warn { color: var(--amber); text-shadow: 0 0 10px rgba(255,154,61,.5); }
+  .lean-num.danger { color: var(--red); text-shadow: 0 0 10px rgba(255,68,54,.6); }
   .attitude-sub { display:flex; justify-content:center; gap:10px; font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top:2px; }
   .attitude-sub b { color: var(--text); font-size: 10.5px; }
 
   .grid { display:grid; grid-template-columns: 1fr 1fr; gap:5px; }
-  .tile { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 8px; padding: 5px 8px; position:relative; }
+  .tile { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 8px; padding: 5px 8px; position:relative; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
   .tile-label { font-family: var(--mono); font-size: 7.5px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
   .tile-val { font-family: var(--mono); font-size: 15px; font-weight: 600; margin-top: 1px; color: var(--text); }
   .tile-unit { font-size: 9px; color: var(--muted); margin-left: 2px; }
   .tile-flag {
     position:absolute; top:5px; right:6px; font-family: var(--mono); font-size: 7px; padding: 1px 4px; border-radius: 4px;
-    background: rgba(255,68,54,.15); color: var(--red); opacity:0; transition: opacity .2s;
+    opacity:0; transition: opacity .2s;
   }
+  .tile-flag.accel { background: rgba(255,154,61,.18); color: var(--amber); }
+  .tile-flag.brake { background: rgba(255,68,54,.18); color: var(--red); }
   .tile-flag.show { opacity:1; }
 
-  .score-card { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 9px; padding: 6px 9px; }
+  .score-card { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 9px; padding: 6px 9px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
   .score-top { display:flex; align-items:baseline; justify-content:space-between; }
   .score-title { font-family: var(--mono); font-size: 8px; letter-spacing: 1px; color: var(--muted); text-transform:uppercase; }
-  .score-num { font-family: var(--mono); font-weight:700; font-size: 21px; color: var(--green); }
+  .score-num { font-family: var(--disp); font-weight:700; font-size: 20px; color: var(--green); }
   .score-num.mid { color: var(--amber); }
   .score-num.low { color: var(--red); }
   .subrow-compact { display:flex; justify-content:space-between; font-family: var(--mono); font-size: 8.5px; color: var(--muted); margin-top:3px; }
@@ -149,13 +172,13 @@
   .actions { display:flex; flex-direction:column; gap:5px; }
   .actions-row { display:flex; gap:5px; }
   .btn {
-    appearance:none; border:none; border-radius: 9px; padding: 8px; font-family: var(--disp); font-size: 13px; letter-spacing: .6px;
+    appearance:none; border:none; border-radius: 9px; padding: 8px; font-family: var(--disp); font-weight:700; font-size: 12px; letter-spacing: .8px;
     display:flex; align-items:center; justify-content:center; gap:5px; cursor:pointer; transition: transform .1s, opacity .2s; flex: 1 1 auto;
   }
   .btn:active { transform: scale(0.97); }
-  .btn-start { background: linear-gradient(135deg, var(--cyan), #00A99D); color: #06110F; }
-  .btn-stop { background: linear-gradient(135deg, var(--red), #B8221A); color: #1A0303; }
-  .btn-calib { background: linear-gradient(135deg, var(--amber), #B85E10); color: #1A0F03; font-size:11.5px; }
+  .btn-start { background: linear-gradient(135deg, var(--blue-glow), var(--blue-dim)); color: #041020; box-shadow: 0 0 14px rgba(46,142,255,.4); }
+  .btn-stop { background: linear-gradient(135deg, var(--red), #B8221A); color: #1A0303; box-shadow: 0 0 14px rgba(255,68,54,.35); }
+  .btn-calib { background: transparent; border: 1px solid var(--blue-dim); color: var(--blue-glow); font-family: var(--mono); font-weight:600; font-size:10.5px; }
   .btn-ghost { background: transparent; border: 1px solid var(--panel-edge); color: var(--muted); font-family: 'Inter', sans-serif; font-weight:500; font-size:10.5px; padding: 8px; }
   .btn-ghost:disabled { opacity:.4; }
   .btn[disabled] { opacity:.5; pointer-events:none; }
@@ -166,7 +189,7 @@
 <body>
 
   <div class="rotate-hint">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#00E5D4" stroke-width="1.5">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#5CC8FF" stroke-width="1.5">
       <rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/>
     </svg>
     <p>Ruota il telefono in orizzontale — l'app è ottimizzata solo per landscape. Controlla anche che il blocco rotazione sia disattivato.</p>
@@ -179,7 +202,7 @@
     </div>
 
     <div class="perm-note" id="permNote">
-      Supporto fisso, schermo acceso. La mappa richiede connessione dati. Calibra a moto ferma prima di partire.
+      Supporto fisso, schermo acceso. La mappa richiede connessione dati. <b>Calibra</b> a moto ferma prima di partire.
     </div>
 
     <div class="layout">
@@ -187,7 +210,12 @@
       <div class="col-map">
         <div class="map-rotator"><div id="leafletMap"></div></div>
         <div class="map-arrow"></div>
-        <div class="map-badge" id="mapBadge"><b id="distVal">0.0</b> km</div>
+        <div class="map-badge"><b id="distVal">0.0</b> km</div>
+        <div class="map-size-ctrl" id="mapSizeCtrl">
+          <button data-size="55" id="sizeS">S</button>
+          <button data-size="68" id="sizeM" class="active">M</button>
+          <button data-size="82" id="sizeL">L</button>
+        </div>
         <div class="map-attrib">© OpenStreetMap</div>
         <div class="map-empty" id="mapEmpty">In attesa di segnale GPS…</div>
       </div>
@@ -198,15 +226,15 @@
             <defs><clipPath id="circleClip"><circle cx="150" cy="150" r="149"/></clipPath></defs>
             <g clip-path="url(#circleClip)">
               <g id="horizonGroup" transform-origin="150 150">
-                <rect x="-150" y="-450" width="600" height="600" fill="#0E2A33"/>
+                <rect x="-150" y="-450" width="600" height="600" fill="#0B2A44"/>
                 <rect x="-150" y="150" width="600" height="450" fill="#1A130A"/>
-                <line x1="-300" y1="150" x2="600" y2="150" stroke="#3A4048" stroke-width="2"/>
+                <line x1="-300" y1="150" x2="600" y2="150" stroke="#2E5A80" stroke-width="2"/>
               </g>
             </g>
-            <circle cx="150" cy="150" r="149" fill="none" stroke="#23272E" stroke-width="2"/>
-            <line x1="110" y1="150" x2="135" y2="150" stroke="#E9EDF1" stroke-width="3"/>
-            <line x1="165" y1="150" x2="190" y2="150" stroke="#E9EDF1" stroke-width="3"/>
-            <circle cx="150" cy="150" r="3" fill="#E9EDF1"/>
+            <circle cx="150" cy="150" r="149" fill="none" stroke="#17283F" stroke-width="2"/>
+            <line x1="110" y1="150" x2="135" y2="150" stroke="#E7F0FF" stroke-width="3"/>
+            <line x1="165" y1="150" x2="190" y2="150" stroke="#E7F0FF" stroke-width="3"/>
+            <circle cx="150" cy="150" r="3" fill="#E7F0FF"/>
           </svg>
           <div class="lean-readout"><div class="lean-num" id="leanNum">--</div></div>
         </div>
@@ -215,8 +243,8 @@
         <div class="grid">
           <div class="tile"><div class="tile-label">Velocità</div><div class="tile-val" id="speedVal">--<span class="tile-unit">km/h</span></div></div>
           <div class="tile"><div class="tile-label">Piega max</div><div class="tile-val" id="maxLeanVal">--<span class="tile-unit">°</span></div></div>
-          <div class="tile"><div class="tile-label">Accel.</div><div class="tile-val" id="accelFwdVal">--<span class="tile-unit">g</span></div><div class="tile-flag" id="accelFlag">+</div></div>
-          <div class="tile"><div class="tile-label">Frenata max</div><div class="tile-val" id="brakeVal">--<span class="tile-unit">g</span></div><div class="tile-flag" id="brakeFlag">!</div></div>
+          <div class="tile"><div class="tile-label">Accel.</div><div class="tile-val" id="accelFwdVal">--<span class="tile-unit">g</span></div><div class="tile-flag accel" id="accelFlag">+</div></div>
+          <div class="tile"><div class="tile-label">Frenata max</div><div class="tile-val" id="brakeVal">--<span class="tile-unit">g</span></div><div class="tile-flag brake" id="brakeFlag">!</div></div>
           <div class="tile"><div class="tile-label">Assetto</div><div class="tile-val" id="suspVal">--<span class="tile-unit">/100</span></div></div>
           <div class="tile"><div class="tile-label">Punti</div><div class="tile-val" id="pointsVal">0</div></div>
         </div>
@@ -256,8 +284,27 @@
   const valAccel = $('valAccel'), valLean = $('valLean'), valComfort = $('valComfort');
   const distVal = $('distVal'), mapEmpty = $('mapEmpty');
   const mapRotator = document.querySelector('.map-rotator');
+  const mapSizeCtrl = $('mapSizeCtrl');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+
+  // --- adjustable map size, persisted locally ---
+  (function initMapSize(){
+    let saved = null;
+    try { saved = localStorage.getItem('moto_map_pct'); } catch(e){}
+    const pct = saved || '68';
+    document.documentElement.style.setProperty('--map-pct', pct + '%');
+    mapSizeCtrl.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('active', b.dataset.size === pct);
+      b.addEventListener('click', () => {
+        document.documentElement.style.setProperty('--map-pct', b.dataset.size + '%');
+        mapSizeCtrl.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        try { localStorage.setItem('moto_map_pct', b.dataset.size); } catch(e){}
+        if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 280);
+      });
+    });
+  })();
 
   function getScreenAngle(){
     if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
