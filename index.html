@@ -8,360 +8,394 @@
 <title>Telemetria Moto — Prova</title>
 <style>
   :root{
-    --asphalt: #0A0C0F;
-    --panel: #14171C;
-    --panel-edge: #23272E;
-    --cyan: #00E5D4;
-    --amber: #FF8A1E;
+    --map-pct: 60%;
+    --bg: #050A14;
+    --panel: #0A1526;
+    --panel-edge: #17283F;
+    --blue: #2E8EFF;
+    --blue-dim: #1C5FB8;
+    --blue-glow: #5CC8FF;
+    --amber: #FF9A3D;
     --red: #FF4436;
-    --green: #4CD97B;
-    --text: #E9EDF1;
-    --muted: #6B7480;
+    --green: #35D48A;
+    --text: #E7F0FF;
+    --muted: #5C7699;
     --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
-    --disp: 'Bebas Neue', 'Oswald', sans-serif;
+    --disp: 'Orbitron', 'Bebas Neue', sans-serif;
   }
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin:0; padding:0; height:100%;
-    background: var(--asphalt);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    overscroll-behavior: none;
-    user-select: none;
-  }
+  html, body { margin:0; padding:0; height:100%; background: var(--bg); color: var(--text); font-family:'Inter',sans-serif; overscroll-behavior:none; user-select:none; }
   body {
-    display:flex; flex-direction:column;
-    min-height:100vh;
-    padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
-    overflow: hidden;
+    position:relative; display:flex; flex-direction:column; min-height:100vh;
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    overflow:hidden;
+  }
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image: linear-gradient(rgba(46,142,255,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(46,142,255,.055) 1px, transparent 1px);
+    background-size: 26px 26px;
   }
 
-  /* --- rotate hint (shown only in portrait) --- */
   .rotate-hint { display:none; }
   @media (orientation: portrait) {
-    .rotate-hint {
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:14px; height:100vh; text-align:center; padding: 0 30px;
-    }
-    .rotate-hint svg { width:64px; height:64px; opacity:.6; animation: rotatePulse 1.8s ease-in-out infinite; }
+    .rotate-hint { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; height:100vh; text-align:center; padding:0 30px; position:relative; z-index:1; }
+    .rotate-hint svg { width:64px; height:64px; opacity:.7; animation: rotatePulse 1.8s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(92,200,255,.5)); }
     .rotate-hint p { font-family: var(--mono); font-size:13px; color: var(--muted); max-width:260px; line-height:1.5; margin:0; }
     .app { display:none; }
   }
-  @keyframes rotatePulse { 0%,100%{ transform:rotate(0deg); } 50%{ transform:rotate(90deg); } }
+  @keyframes rotatePulse { 0%,100%{transform:rotate(0deg);} 50%{transform:rotate(90deg);} }
 
-  .app { display:flex; flex-direction:column; height:100vh; }
+  .app { position:relative; z-index:1; display:flex; flex-direction:column; height:100vh; }
 
-  .topbar {
-    display:flex; justify-content:space-between; align-items:center;
-    margin-bottom: 6px; flex: 0 0 auto;
-  }
-  .brand {
-    font-family: var(--disp);
-    font-size: 18px;
-    letter-spacing: 1.5px;
-    color: var(--text);
-  }
-  .brand span { color: var(--cyan); }
-  .status-dot {
-    width:8px; height:8px; border-radius:50%;
-    background: var(--muted);
-    transition: all .3s;
-  }
-  .status-dot.live {
-    background: var(--red);
-    box-shadow: 0 0 10px 2px rgba(255,68,54,.6);
-    animation: pulse 1.4s infinite;
-  }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
-  .status-row { display:flex; align-items:center; gap:7px; font-family: var(--mono); font-size:11px; color: var(--muted); }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex:0 0 auto; }
+  .brand { font-family: var(--disp); font-weight:700; font-size:14px; letter-spacing:2px; color: var(--text); text-shadow: 0 0 12px rgba(46,142,255,.5); }
+  .brand span { color: var(--blue-glow); }
+  .status-dot { width:7px; height:7px; border-radius:50%; background: var(--muted); }
+  .status-dot.live { background: var(--red); box-shadow: 0 0 10px 2px rgba(255,68,54,.6); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+  .status-row { display:flex; align-items:center; gap:6px; font-family: var(--mono); font-size:10px; color: var(--muted); }
 
-  .perm-note {
-    font-size: 10.5px; color: var(--muted); line-height:1.4;
-    background: var(--panel); border:1px solid var(--panel-edge);
-    border-radius: 8px; padding: 6px 10px; margin-bottom: 6px;
-    flex: 0 0 auto;
-  }
-  .perm-note b { color: var(--text); }
+  .perm-note { font-size:8.5px; color: var(--muted); line-height:1.3; background: var(--panel); border:1px solid var(--panel-edge); border-radius:6px; padding:4px 8px; margin-bottom:4px; flex:0 0 auto; }
+  .perm-note b { color: var(--blue-glow); }
 
-  .layout {
-    display:flex; flex-direction:row; gap:12px;
-    flex: 1 1 auto; min-height:0;
-  }
+  .layout { display:flex; flex-direction:row; gap:0; flex:1 1 auto; min-height:0; }
 
-  .col-horizon {
-    flex: 0 0 auto;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:6px;
+  /* ============ MAP (left, resizable) ============ */
+  .col-map {
+    flex: 0 0 var(--map-pct); min-width:0; position:relative;
+    border-radius:12px; overflow:hidden; background: var(--panel); border:1px solid var(--panel-edge);
+    box-shadow: 0 0 0 1px rgba(46,142,255,.06) inset, 0 0 22px rgba(46,142,255,.08);
   }
-  .horizon-wrap {
-    position:relative;
-    width: min(32vw, 78vh, 260px);
-    aspect-ratio: 1/1;
-    border-radius: 50%;
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    overflow:hidden;
-    box-shadow: inset 0 0 40px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02);
-  }
-  .horizon-wrap svg { display:block; width:100%; height:100%; }
-  .lean-readout {
-    position:absolute; top:50%; left:50%;
-    transform: translate(-50%,-50%);
-    text-align:center; pointer-events:none; z-index:5;
-  }
-  .lean-num {
-    font-family: var(--mono); font-weight:700;
-    font-size: 44px; line-height:1;
-    color: var(--cyan);
-    text-shadow: 0 0 20px rgba(0,229,212,.35);
-    transition: color .2s;
-  }
-  .lean-num.warn { color: var(--amber); text-shadow: 0 0 20px rgba(255,138,30,.4); }
-  .lean-num.danger { color: var(--red); text-shadow: 0 0 20px rgba(255,68,54,.5); }
-  .lean-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; color: var(--muted); margin-top: 2px; }
+  #gmap { width:100%; height:100%; background: var(--panel); }
 
-  .attitude-sub {
-    display:flex; justify-content:center; gap:16px;
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  .map-arrow {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(0deg);
+    width:0; height:0; z-index:400; pointer-events:none; transition: transform .2s linear;
+    border-left:11px solid transparent; border-right:11px solid transparent; border-bottom:22px solid var(--amber);
+    filter: drop-shadow(0 0 7px rgba(255,154,61,.8));
   }
-  .attitude-sub b { color: var(--text); font-size: 13px; }
+  .map-arrow::after { content:''; position:absolute; left:-11px; top:22px; width:22px; height:8px; background: var(--amber); border-radius:0 0 4px 4px; opacity:.85; }
 
-  .col-mid {
-    flex: 1 1 auto; min-width:0;
-    display:flex; flex-direction:column; justify-content:center;
+  .map-badge { position:absolute; top:8px; left:8px; z-index:401; background: rgba(5,10,20,.75); border:1px solid var(--panel-edge); border-radius:7px; padding:4px 8px; font-family: var(--mono); font-size:10px; color: var(--text); box-shadow: 0 0 10px rgba(46,142,255,.15); }
+  .map-badge b { color: var(--blue-glow); }
+  .map-nav-btn {
+    position:absolute; top:8px; right:8px; z-index:401; width:30px; height:30px; border-radius:8px;
+    background: rgba(5,10,20,.75); border:1px solid var(--panel-edge); display:flex; align-items:center; justify-content:center;
+    font-size:15px; cursor:pointer; box-shadow: 0 0 10px rgba(46,142,255,.15);
   }
-  .grid {
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:8px;
-  }
-  .tile {
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 9px;
-    padding: 8px 11px;
-    position:relative;
-  }
-  .tile-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
-  .tile-val { font-family: var(--mono); font-size: 20px; font-weight: 600; margin-top: 2px; color: var(--text); }
-  .tile-unit { font-size: 11px; color: var(--muted); margin-left: 3px; }
-  .tile-flag {
-    position:absolute; top:8px; right:9px;
-    font-family: var(--mono); font-size: 8.5px; letter-spacing:.5px;
-    padding: 2px 5px; border-radius: 5px;
-    background: rgba(255,68,54,.15); color: var(--red);
-    opacity:0; transition: opacity .2s;
-  }
-  .tile-flag.show { opacity:1; }
+  .map-nav-btn.active { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
+  .map-empty { position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center; background: var(--bg); font-family: var(--mono); font-size:11px; color: var(--muted); text-align:center; padding:10px; }
 
-  .col-side {
-    flex: 0 0 220px;
-    display:flex; flex-direction:column; justify-content:center; gap:8px;
-    min-width:0;
-  }
-  .score-card {
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 10px;
-    padding: 10px 13px 12px;
-  }
+  .resize-handle { flex: 0 0 20px; display:flex; align-items:center; justify-content:center; cursor:ew-resize; touch-action:none; position:relative; z-index:5; }
+  .resize-handle .grip { width:5px; height:44px; border-radius:3px; background: var(--panel-edge); box-shadow: 0 0 8px rgba(46,142,255,.15); transition: background .15s; }
+  .resize-handle:active .grip, .resize-handle.dragging .grip { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
+
+  /* ============ HUD column (right) ============ */
+  .col-hud { flex:1 1 auto; min-width:100px; display:flex; flex-direction:column; gap:5px; min-height:0; }
+  .hud-top { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:5px; overflow-y:auto; }
+  .hud-bottom { flex:0 0 auto; display:flex; flex-direction:column; gap:7px; }
+
+  /* --- shared gauge card (lean + pitch) --- */
+  .gauge-card { background: var(--panel); border:1px solid var(--panel-edge); border-radius:10px; padding:5px 7px; display:flex; align-items:center; gap:7px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
+  .lean-card { flex: 5 1 0; min-height:110px; }
+  .pitch-card { flex: 3 1 0; min-height:78px; }
+  .gauge-svg-wrap { flex:0 0 auto; height:100%; aspect-ratio:1/1; max-width:50%; }
+  .gauge-svg-wrap svg { width:100%; height:100%; display:block; }
+  .gauge-readout { flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; }
+  .gauge-num { font-family: var(--disp); font-weight:800; line-height:1; color: var(--blue-glow); text-shadow: 0 0 14px rgba(92,200,255,.6); }
+  .lean-card .gauge-num { font-size: clamp(24px, 6vh, 44px); }
+  .pitch-card .gauge-num { font-size: clamp(18px, 4vh, 30px); }
+  .gauge-num.warn { color: var(--amber); text-shadow: 0 0 14px rgba(255,154,61,.5); }
+  .gauge-num.danger { color: var(--red); text-shadow: 0 0 14px rgba(255,68,54,.6); }
+  .gauge-label { font-family: var(--mono); font-size:8px; letter-spacing:1.5px; color: var(--muted); margin-top:1px; }
+  .gauge-max { font-family: var(--mono); font-size:10px; color: var(--blue-dim); margin-top:3px; letter-spacing:.5px; }
+  .gauge-max b { color: var(--blue-glow); font-size:12px; }
+
+  /* --- G force meter --- */
+  .gforce-card { flex:0 0 auto; background: var(--panel); border:1px solid var(--panel-edge); border-radius:10px; padding:7px 10px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
+  .gforce-top { display:flex; justify-content:space-between; align-items:baseline; }
+  .gforce-title { font-family: var(--mono); font-size:8px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
+  .gforce-vals { text-align:right; }
+  .gforce-val { font-family: var(--disp); font-weight:800; font-size:24px; line-height:1; }
+  .gforce-val.accel { color: var(--blue-glow); }
+  .gforce-val.brake { color: var(--red); }
+  .gforce-sub { font-family: var(--mono); font-size:9.5px; color: var(--muted); margin-top:1px; }
+  .gforce-bar-track { position:relative; height:10px; border-radius:5px; background:#0F1D30; margin-top:6px; overflow:visible; }
+  .gforce-bar-mid { position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background: var(--panel-edge); }
+  .gforce-bar-fill { position:absolute; top:0; bottom:0; border-radius:5px; transition: width .1s linear; }
+  .gforce-bar-fill.accel { left:50%; background: linear-gradient(90deg, var(--blue-dim), var(--blue-glow)); }
+  .gforce-bar-fill.brake { right:50%; background: linear-gradient(270deg, #B8221A, var(--red)); }
+  .gforce-ghost { position:absolute; top:-3px; width:2.5px; height:16px; border-radius:2px; background:#fff; box-shadow: 0 0 6px rgba(255,255,255,.7); opacity:0; }
+
+  /* --- compact tiles + score --- */
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; flex:0 0 auto; }
+  .tile { background: var(--panel); border:1px solid var(--panel-edge); border-radius:8px; padding:4px 7px; }
+  .tile-label { font-family: var(--mono); font-size:7px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
+  .tile-val { font-family: var(--mono); font-size:14px; font-weight:600; color: var(--text); }
+  .tile-unit { font-size:8.5px; color: var(--muted); margin-left:2px; }
+
+  .score-card { flex:0 0 auto; background: var(--panel); border:1px solid var(--panel-edge); border-radius:9px; padding:5px 9px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
   .score-top { display:flex; align-items:baseline; justify-content:space-between; }
-  .score-title { font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.3px; color: var(--muted); text-transform:uppercase; }
-  .score-num { font-family: var(--mono); font-weight:700; font-size: 28px; color: var(--green); }
+  .score-title { font-family: var(--mono); font-size:7.5px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
+  .score-num { font-family: var(--disp); font-weight:700; font-size:16px; color: var(--green); }
   .score-num.mid { color: var(--amber); }
   .score-num.low { color: var(--red); }
-  .subscores { margin-top: 7px; display:flex; flex-direction:column; gap:5px; }
-  .subrow { display:grid; grid-template-columns: 78px 1fr 24px; align-items:center; gap:6px; }
-  .subrow-label { font-family: var(--mono); font-size: 9px; color: var(--muted); }
-  .subbar-track { height:4px; border-radius:3px; background:#20242A; overflow:hidden; }
-  .subbar-fill { height:100%; border-radius:3px; background: var(--cyan); transition: width .3s; }
-  .subrow-val { font-family: var(--mono); font-size: 10px; color: var(--text); text-align:right; }
+  .subrow-compact { display:flex; justify-content:space-between; font-family: var(--mono); font-size:7.5px; color: var(--muted); margin-top:2px; }
+  .subrow-compact b { color: var(--text); }
 
-  .actions { display:flex; flex-direction:row; gap:8px; }
-  .btn {
-    appearance:none; border:none; border-radius: 10px;
-    padding: 11px; font-family: var(--disp); font-size: 15px; letter-spacing: .8px;
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    cursor:pointer; transition: transform .1s, opacity .2s;
-    flex: 1 1 auto;
+  /* ============ big blind-tappable controls ============ */
+  .btn-big {
+    appearance:none; border:none; border-radius:12px; padding:14px; font-family: var(--disp); font-weight:700; font-size:16px; letter-spacing:1px;
+    display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; min-height:56px;
+    transition: transform .1s, opacity .2s;
   }
-  .btn:active { transform: scale(0.98); }
-  .btn-start { background: linear-gradient(135deg, var(--cyan), #00A99D); color: #06110F; }
-  .btn-stop { background: linear-gradient(135deg, var(--red), #B8221A); color: #1A0303; }
-  .btn-ghost {
-    background: transparent; border: 1px solid var(--panel-edge); color: var(--muted);
-    font-family: 'Inter', sans-serif; font-weight:500; font-size:12px; padding: 10px;
-  }
-  .btn-ghost:disabled { opacity:.4; }
-  .btn[disabled] { opacity:.5; pointer-events:none; }
+  .btn-big:active { transform: scale(0.97); }
+  .btn-big.start { background: linear-gradient(135deg, var(--blue-glow), var(--blue-dim)); color:#041020; box-shadow: 0 0 16px rgba(46,142,255,.45); }
+  .btn-big.stop { background: linear-gradient(135deg, var(--red), #B8221A); color:#1A0303; box-shadow: 0 0 16px rgba(255,68,54,.4); }
+  .btn-big.calib { background: rgba(46,142,255,.1); border:2px solid var(--blue-dim); color: var(--blue-glow); }
+  .btn-big[disabled] { opacity:.5; pointer-events:none; }
 
-  .log-info { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align:center; }
+  .mini-actions-row { display:flex; gap:7px; }
+  .btn-mini { appearance:none; border:1px solid var(--panel-edge); background: var(--panel); color: var(--muted); border-radius:9px; padding:8px; font-family:'Inter',sans-serif; font-weight:500; font-size:10.5px; display:flex; align-items:center; justify-content:center; gap:4px; flex:1 1 0; cursor:pointer; min-height:38px; }
+  .btn-mini:disabled { opacity:.4; }
+
+  .log-info { font-family: var(--mono); font-size:8.5px; color: var(--muted); text-align:center; min-height:10px; }
+
+  /* ============ popovers (settings + nav) ============ */
+  .popover-backdrop { position:fixed; inset:0; background: rgba(0,0,0,.55); z-index:900; display:none; }
+  .popover-backdrop.open { display:block; }
+  .popover-panel { position:fixed; bottom:12px; right:12px; left:12px; z-index:901; background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:14px; box-shadow: 0 0 30px rgba(46,142,255,.25); display:none; }
+  .popover-panel.open { display:block; }
+  .popover-title { font-family: var(--disp); font-size:13px; letter-spacing:1px; color: var(--blue-glow); margin-bottom:10px; }
+  .settings-row { display:flex; justify-content:space-between; align-items:center; font-family: var(--mono); font-size:11px; color: var(--text); padding:8px 0; border-top:1px solid var(--panel-edge); }
+  .settings-row:first-of-type { border-top:none; }
+  .settings-toggle { appearance:none; border:1px solid var(--blue-dim); background:transparent; color: var(--blue-glow); font-family: var(--mono); font-size:10.5px; padding:6px 12px; border-radius:7px; }
+  .settings-input { width:100%; background:#0F1D30; border:1px solid var(--panel-edge); border-radius:8px; padding:11px; color:var(--text); font-family:var(--mono); font-size:13px; margin-bottom:10px; }
 </style>
 </head>
 <body>
 
   <div class="rotate-hint">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#00E5D4" stroke-width="1.5">
-      <rect x="5" y="2" width="14" height="20" rx="2"/>
-      <line x1="12" y1="18" x2="12" y2="18.01"/>
-    </svg>
-    <p>Ruota il telefono in orizzontale — l'app è ottimizzata solo per landscape. Controlla anche che il blocco rotazione (Centro di Controllo) sia disattivato.</p>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#5CC8FF" stroke-width="1.5"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+    <p>Ruota il telefono in orizzontale — l'app è ottimizzata solo per landscape.</p>
   </div>
 
   <div class="app">
     <div class="topbar">
       <div class="brand">TELEMETRIA<span>.MOTO</span></div>
-      <div class="status-row">
-        <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">FERMO</span>
-      </div>
+      <div class="status-row"><div class="status-dot" id="statusDot"></div><span id="statusText">FERMO</span></div>
     </div>
-
-    <div class="perm-note" id="permNote">
-      Supporto fisso, schermo acceso. Concedi i permessi <b>movimento/orientamento</b> e <b>posizione</b>. Smorzamento = indice stimato dalle vibrazioni, non misura di laboratorio.
-    </div>
+    <div class="perm-note" id="permNote">Supporto fisso. <b>Calibra</b> a moto ferma prima di partire.</div>
 
     <div class="layout">
-      <div class="col-horizon">
-        <div class="horizon-wrap">
-          <svg viewBox="0 0 300 300" id="horizonSvg">
-            <defs>
-              <clipPath id="circleClip"><circle cx="150" cy="150" r="149"/></clipPath>
-            </defs>
-            <g clip-path="url(#circleClip)">
-              <g id="horizonGroup" transform-origin="150 150">
-                <rect x="-150" y="-450" width="600" height="600" fill="#0E2A33"/>
-                <rect x="-150" y="150" width="600" height="450" fill="#1A130A"/>
-                <line x1="-300" y1="150" x2="600" y2="150" stroke="#3A4048" stroke-width="2"/>
-                <line x1="-300" y1="100" x2="600" y2="100" stroke="#2A3038" stroke-width="1"/>
-                <line x1="-300" y1="200" x2="600" y2="200" stroke="#2A3038" stroke-width="1"/>
-              </g>
-            </g>
-            <circle cx="150" cy="150" r="149" fill="none" stroke="#23272E" stroke-width="2"/>
-            <g id="ticks" stroke="#4A515B" stroke-width="1.5"></g>
-            <line x1="110" y1="150" x2="135" y2="150" stroke="#E9EDF1" stroke-width="3"/>
-            <line x1="165" y1="150" x2="190" y2="150" stroke="#E9EDF1" stroke-width="3"/>
-            <circle cx="150" cy="150" r="3" fill="#E9EDF1"/>
-          </svg>
-          <div class="lean-readout">
-            <div class="lean-num" id="leanNum">--</div>
-            <div class="lean-label">GRADI PIEGA</div>
-          </div>
-        </div>
-        <div class="attitude-sub">
-          <div>PIEGA <b id="leanSub">--°</b></div>
-          <div>BECCH. <b id="pitchSub">--°</b></div>
-        </div>
+
+      <div class="col-map" id="colMap">
+        <div id="gmap"></div>
+        <div class="map-arrow" id="mapArrow"></div>
+        <div class="map-badge"><b id="distVal">0.0</b> km</div>
+        <div class="map-nav-btn" id="mapNavBtn">🧭</div>
+        <div class="map-empty" id="mapEmpty">In attesa di segnale GPS…</div>
       </div>
 
-      <div class="col-mid">
-        <div class="grid">
-          <div class="tile">
-            <div class="tile-label">Velocità GPS</div>
-            <div class="tile-val" id="speedVal">--<span class="tile-unit">km/h</span></div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Piega max</div>
-            <div class="tile-val" id="maxLeanVal">--<span class="tile-unit">°</span></div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Accelerazione</div>
-            <div class="tile-val" id="accelFwdVal">--<span class="tile-unit">g</span></div>
-            <div class="tile-flag" id="accelFlag">ACCEL+</div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Frenata max</div>
-            <div class="tile-val" id="brakeVal">--<span class="tile-unit">g</span></div>
-            <div class="tile-flag" id="brakeFlag">FRENA!</div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Vibrazione/Assetto</div>
-            <div class="tile-val" id="suspVal">--<span class="tile-unit">/100</span></div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Punti registrati</div>
-            <div class="tile-val" id="pointsVal">0</div>
-          </div>
-        </div>
-      </div>
+      <div class="resize-handle" id="resizeHandle"><div class="grip"></div></div>
 
-      <div class="col-side">
-        <div class="score-card">
-          <div class="score-top">
-            <div class="score-title">Punteggio guida</div>
-            <div class="score-num" id="scoreNum">--</div>
+      <div class="col-hud">
+        <div class="hud-top">
+
+          <div class="gauge-card lean-card">
+            <div class="gauge-svg-wrap">
+              <svg viewBox="0 0 160 160" id="leanSvg">
+                <line x1="10" y1="140" x2="150" y2="140" stroke="#17283F" stroke-width="2"/>
+                <g id="bikeGhost" opacity="0">
+                  <path d="M80,55 C68,70 66,95 72,132 L88,132 C94,95 92,70 80,55 Z" fill="rgba(92,200,255,.32)"/>
+                  <ellipse cx="80" cy="65" rx="20" ry="6" fill="rgba(92,200,255,.32)"/>
+                  <circle cx="80" cy="45" r="11" fill="rgba(92,200,255,.32)"/>
+                  <rect x="74" y="130" width="12" height="10" rx="2" fill="rgba(92,200,255,.32)"/>
+                </g>
+                <g id="bikeLive">
+                  <path d="M80,55 C68,70 66,95 72,132 L88,132 C94,95 92,70 80,55 Z" fill="var(--blue-glow)"/>
+                  <ellipse cx="80" cy="65" rx="20" ry="6" fill="var(--blue-glow)"/>
+                  <circle cx="80" cy="45" r="11" fill="var(--blue-glow)"/>
+                  <rect x="74" y="130" width="12" height="10" rx="2" fill="var(--blue-glow)"/>
+                </g>
+              </svg>
+            </div>
+            <div class="gauge-readout">
+              <div class="gauge-num" id="leanNumBig">--°</div>
+              <div class="gauge-label">PIEGA</div>
+              <div class="gauge-max">MAX <b id="leanMaxVal">--°</b></div>
+            </div>
           </div>
-          <div class="subscores">
-            <div class="subrow">
-              <div class="subrow-label">Frenata/Accel.</div>
-              <div class="subbar-track"><div class="subbar-fill" id="barAccel" style="width:0%"></div></div>
-              <div class="subrow-val" id="valAccel">--</div>
+
+          <div class="gforce-card">
+            <div class="gforce-top">
+              <div class="gforce-title">Accelerazione / Frenata</div>
+              <div class="gforce-vals">
+                <div class="gforce-val" id="gforceVal">0.00g</div>
+                <div class="gforce-sub" id="gforceSubMs">0.0 m/s²</div>
+              </div>
             </div>
-            <div class="subrow">
-              <div class="subrow-label">Piega pulita</div>
-              <div class="subbar-track"><div class="subbar-fill" id="barLean" style="width:0%"></div></div>
-              <div class="subrow-val" id="valLean">--</div>
+            <div class="gforce-bar-track">
+              <div class="gforce-bar-mid"></div>
+              <div class="gforce-bar-fill accel" id="gBarAccel" style="width:0%"></div>
+              <div class="gforce-bar-fill brake" id="gBarBrake" style="width:0%"></div>
+              <div class="gforce-ghost" id="gGhost"></div>
             </div>
-            <div class="subrow">
-              <div class="subrow-label">Compostezza</div>
-              <div class="subbar-track"><div class="subbar-fill" id="barComfort" style="width:0%"></div></div>
-              <div class="subrow-val" id="valComfort">--</div>
+          </div>
+
+          <div class="gauge-card pitch-card">
+            <div class="gauge-svg-wrap">
+              <svg viewBox="0 0 160 160" id="pitchSvg">
+                <line x1="10" y1="120" x2="150" y2="120" stroke="#17283F" stroke-width="2"/>
+                <g id="pitchGhost" opacity="0">
+                  <circle cx="40" cy="110" r="13" fill="rgba(92,200,255,.32)"/>
+                  <circle cx="120" cy="110" r="13" fill="rgba(92,200,255,.32)"/>
+                  <path d="M40,100 C50,75 70,68 90,68 C105,68 115,80 120,100 L120,105 L40,105 Z" fill="rgba(92,200,255,.32)"/>
+                  <circle cx="95" cy="58" r="9" fill="rgba(92,200,255,.32)"/>
+                </g>
+                <g id="pitchLive">
+                  <circle cx="40" cy="110" r="13" fill="var(--blue-glow)"/>
+                  <circle cx="120" cy="110" r="13" fill="var(--blue-glow)"/>
+                  <path d="M40,100 C50,75 70,68 90,68 C105,68 115,80 120,100 L120,105 L40,105 Z" fill="var(--blue-glow)"/>
+                  <circle cx="95" cy="58" r="9" fill="var(--blue-glow)"/>
+                </g>
+              </svg>
             </div>
+            <div class="gauge-readout">
+              <div class="gauge-num" id="pitchNumBig">--°</div>
+              <div class="gauge-label">BECCHEGGIO</div>
+              <div class="gauge-max">MAX <b id="pitchMaxVal">--°</b></div>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="tile"><div class="tile-label">Velocità</div><div class="tile-val" id="speedVal">--<span class="tile-unit">km/h</span></div></div>
+            <div class="tile"><div class="tile-label">Vel. max</div><div class="tile-val" id="maxSpeedVal">--<span class="tile-unit">km/h</span></div></div>
+          </div>
+
+          <div class="score-card">
+            <div class="score-top"><div class="score-title">Guida</div><div class="score-num" id="scoreNum">--</div></div>
+            <div class="subrow-compact"><span>Fr/Ac <b id="valAccel">--</b></span><span>Pg <b id="valLean">--</b></span><span>Cp <b id="valComfort">--</b></span></div>
           </div>
         </div>
 
-        <div class="actions">
-          <button class="btn btn-start" id="mainBtn">Avvia</button>
-          <button class="btn btn-ghost" id="exportBtn" disabled>CSV</button>
+        <div class="hud-bottom">
+          <button class="btn-big start" id="mainBtn">Avvia</button>
+          <button class="btn-big calib" id="calibBtn">Calibra</button>
+          <div class="mini-actions-row">
+            <button class="btn-mini" id="settingsBtn">⚙ Impostazioni</button>
+            <button class="btn-mini" id="exportBtn" disabled>⭳ CSV</button>
+          </div>
+          <div class="log-info" id="logInfo"></div>
         </div>
-        <div class="log-info" id="logInfo"></div>
       </div>
     </div>
+  </div>
+
+  <div class="popover-backdrop" id="settingsBackdrop"></div>
+  <div class="popover-panel" id="settingsPanel">
+    <div class="popover-title">IMPOSTAZIONI</div>
+    <div class="settings-row"><span>Chiudi</span><button class="settings-toggle" id="settingsClose">OK</button></div>
+  </div>
+
+  <div class="popover-backdrop" id="navBackdrop"></div>
+  <div class="popover-panel" id="navPanel">
+    <div class="popover-title">NAVIGATORE</div>
+    <input type="text" id="destInput" class="settings-input" placeholder="Indirizzo o luogo di destinazione..." />
+    <div class="mini-actions-row">
+      <button class="btn-mini" id="navGoBtn">Vai</button>
+      <button class="btn-mini" id="navClearBtn">Annulla percorso</button>
+      <button class="btn-mini" id="navCloseBtn">Chiudi</button>
+    </div>
+    <div class="log-info" id="navInfo"></div>
   </div>
 
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const leanNum = $('leanNum'), leanSub = $('leanSub'), pitchSub = $('pitchSub');
-  const speedVal = $('speedVal'), maxLeanVal = $('maxLeanVal');
-  const accelFwdVal = $('accelFwdVal'), accelFlag = $('accelFlag');
-  const brakeVal = $('brakeVal'), brakeFlag = $('brakeFlag');
-  const suspVal = $('suspVal'), pointsVal = $('pointsVal');
-  const mainBtn = $('mainBtn'), exportBtn = $('exportBtn');
+  const leanNumBig = $('leanNumBig'), leanMaxVal = $('leanMaxVal');
+  const pitchNumBig = $('pitchNumBig'), pitchMaxVal = $('pitchMaxVal');
+  const bikeLive = $('bikeLive'), bikeGhost = $('bikeGhost');
+  const pitchLive = $('pitchLive'), pitchGhost = $('pitchGhost');
+  const speedVal = $('speedVal'), maxSpeedVal = $('maxSpeedVal');
+  const gforceVal = $('gforceVal'), gforceSubMs = $('gforceSubMs'), gBarAccel = $('gBarAccel'), gBarBrake = $('gBarBrake'), gGhost = $('gGhost');
+  const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
-  const horizonGroup = $('horizonGroup'), ticksG = $('ticks');
   const permNote = $('permNote');
   const scoreNum = $('scoreNum');
-  const barAccel = $('barAccel'), valAccel = $('valAccel');
-  const barLean = $('barLean'), valLean = $('valLean');
-  const barComfort = $('barComfort'), valComfort = $('valComfort');
-
-  for (let a = -60; a <= 60; a += 15) {
-    if (a === 0) continue;
-    const rad = (a * Math.PI) / 180;
-    const r1 = 149, r2 = a % 30 === 0 ? 130 : 138;
-    const x1 = 150 + r1 * Math.sin(rad), y1 = 150 - r1 * Math.cos(rad);
-    const x2 = 150 + r2 * Math.sin(rad), y2 = 150 - r2 * Math.cos(rad);
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-    ticksG.appendChild(line);
-  }
+  const valAccel = $('valAccel'), valLean = $('valLean'), valComfort = $('valComfort');
+  const distVal = $('distVal'), mapEmpty = $('mapEmpty'), mapArrow = $('mapArrow');
+  const colMap = $('colMap'), resizeHandle = $('resizeHandle');
+  const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose');
+  const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+  const root = document.documentElement;
 
+  /* ---------- resizable map (drag handle) ---------- */
+  (function initResize(){
+    let saved = null;
+    try { saved = localStorage.getItem('moto_map_pct'); } catch(e){}
+    if (saved) root.style.setProperty('--map-pct', saved + '%');
+    let dragging = false, startX = 0, startPct = parseFloat(saved || 60);
+    const layoutEl = document.querySelector('.layout');
+    function onDown(e){ dragging = true; startX = e.clientX; startPct = parseFloat(getComputedStyle(root).getPropertyValue('--map-pct')) || 60; resizeHandle.classList.add('dragging'); resizeHandle.setPointerCapture(e.pointerId); }
+    function onMove(e){ if (!dragging) return; const dx = e.clientX - startX; const w = layoutEl.clientWidth || 1; let pct = clamp(startPct + (dx / w * 100), 32, 82); root.style.setProperty('--map-pct', pct.toFixed(1) + '%'); }
+    function onUp(){ if (!dragging) return; dragging = false; resizeHandle.classList.remove('dragging'); const pct = getComputedStyle(root).getPropertyValue('--map-pct'); try { localStorage.setItem('moto_map_pct', parseFloat(pct)); } catch(e){} if (gmap) setTimeout(() => google.maps.event.trigger(gmap, 'resize'), 200); }
+    resizeHandle.addEventListener('pointerdown', onDown);
+    resizeHandle.addEventListener('pointermove', onMove);
+    resizeHandle.addEventListener('pointerup', onUp);
+    resizeHandle.addEventListener('pointercancel', onUp);
+  })();
+
+  /* ---------- settings popover ---------- */
+  settingsBtn.addEventListener('click', () => { settingsPanel.classList.add('open'); settingsBackdrop.classList.add('open'); });
+  settingsClose.addEventListener('click', closeSettings);
+  settingsBackdrop.addEventListener('click', closeSettings);
+  function closeSettings(){ settingsPanel.classList.remove('open'); settingsBackdrop.classList.remove('open'); }
+
+  /* ---------- navigator popover ---------- */
+  function openNav(){ navPanel.classList.add('open'); navBackdrop.classList.add('open'); }
+  function closeNav(){ navPanel.classList.remove('open'); navBackdrop.classList.remove('open'); }
+  mapNavBtn.addEventListener('click', openNav);
+  navCloseBtn.addEventListener('click', closeNav);
+  navBackdrop.addEventListener('click', closeNav);
+  navGoBtn.addEventListener('click', () => {
+    const dest = destInput.value.trim();
+    if (!dest) return;
+    if (lastLat === null) { navInfo.textContent = 'Aspetta il segnale GPS.'; return; }
+    if (!window.google || !directionsService) { navInfo.textContent = 'Google Maps non caricato — controlla la API key.'; return; }
+    navInfo.textContent = 'Calcolo percorso…';
+    directionsService.route({
+      origin: { lat: lastLat, lng: lastLon },
+      destination: dest,
+      travelMode: google.maps.TravelMode.DRIVING
+    }, (result, status) => {
+      if (status === 'OK') {
+        directionsRenderer.setDirections(result);
+        mapNavBtn.classList.add('active');
+        navInfo.textContent = 'Percorso impostato ✓';
+        setTimeout(closeNav, 700);
+      } else {
+        navInfo.textContent = 'Destinazione non trovata (' + status + ')';
+      }
+    });
+  });
+  navClearBtn.addEventListener('click', () => {
+    if (directionsRenderer) directionsRenderer.setDirections({ routes: [] });
+    mapNavBtn.classList.remove('active');
+    navInfo.textContent = 'Percorso annullato.';
+  });
+
+  /* ---------- orientation / accel compensation ---------- */
   function getScreenAngle(){
     if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
     if (typeof window.orientation === 'number') return window.orientation;
     return 0;
   }
-
-  // Compensate device-frame beta/gamma for current screen rotation so
-  // "lean" and "pitch" stay meaningful whether the phone is mounted
-  // portrait or landscape.
   function compensateOrientation(beta, gamma, angle){
     switch (((angle % 360) + 360) % 360) {
       case 90:  return { pitch: gamma,  roll: -beta };
@@ -370,7 +404,6 @@
       default:  return { pitch: beta,   roll: gamma };
     }
   }
-  // Same idea for the in-plane (x,y) linear acceleration components.
   function compensateAccelXY(x, y, angle){
     switch (((angle % 360) + 360) % 360) {
       case 90:  return { x: -y, y: x };
@@ -380,15 +413,34 @@
     }
   }
 
-  let recording = false;
+  /* generic short-lived peak-hold-with-decay ("ghost"), used only for G-force */
+  function makePeakHold(holdMs, fadeMs){
+    let peak = 0, sign = 1, peakTime = performance.now();
+    return function(value, now){
+      const abs = Math.abs(value);
+      if (abs >= peak) { peak = abs; sign = value < 0 ? -1 : 1; peakTime = now; }
+      const age = now - peakTime;
+      let opacity;
+      if (age < holdMs) opacity = 1;
+      else if (age < holdMs + fadeMs) opacity = 1 - (age - holdMs) / fadeMs;
+      else { opacity = 0; peak = abs; peakTime = now; sign = value < 0 ? -1 : 1; }
+      return { peak, sign, opacity };
+    };
+  }
+  const gPeak = makePeakHold(1400, 1000);
+
+  let recording = false, sensorsActive = false;
   let currentLean = 0, currentPitch = 0;
-  let currentSpeed = null;
-  let maxLean = 0, maxBrakeG = 0, maxAccelG = 0;
+  let lastRawRoll = 0, lastRawPitch = 0;
+  let leanOffset = 0, pitchOffset = 0;
+  let maxLean = 0, maxPitch = 0, maxSpeedKmh = 0;
   let watchId = null;
   let logData = [];
   let lastLat = null, lastLon = null;
+  let compassHeading = null, lastHeading = 0;
 
   let gEst = { x: 0, y: 0, z: 9.81 };
+  let lastRawAG = null;
   const G_ALPHA = 0.85;
   let linear = { x: 0, y: 0, z: 0 };
 
@@ -399,34 +451,47 @@
   const SCORE_ALPHA = 0.03;
   let lastGammaForRate = null, lastGammaTime = null;
 
-  function setStatus(live, label){
-    statusDot.classList.toggle('live', live);
-    statusText.textContent = label;
+  let totalDistanceM = 0;
+  let gmap = null, directionsService = null, directionsRenderer = null;
+
+  function setStatus(live, label){ statusDot.classList.toggle('live', live); statusText.textContent = label; }
+
+  // NOTE: sign flipped here (-rollDeg) to correct the inverted lean direction
+  function updateLeanGauge(rollDeg){
+    leanNumBig.textContent = Math.abs(rollDeg).toFixed(0) + '°';
+    leanNumBig.classList.remove('warn','danger');
+    const abs = Math.abs(rollDeg);
+    if (abs > 40) leanNumBig.classList.add('danger'); else if (abs > 25) leanNumBig.classList.add('warn');
+
+    bikeLive.setAttribute('transform', `rotate(${-rollDeg} 80 140)`);
+
+    if (Math.abs(rollDeg) > Math.abs(maxLean)) maxLean = rollDeg;
+    leanMaxVal.textContent = Math.abs(maxLean).toFixed(0) + '°';
+    bikeGhost.setAttribute('transform', `rotate(${-maxLean} 80 140)`);
+    bikeGhost.style.opacity = Math.abs(maxLean) > 0.5 ? 0.85 : 0;
   }
 
-  function updateHorizon(rollDeg, pitchDeg){
-    const pitchPx = clamp(pitchDeg, -45, 45) / 45 * 90;
-    horizonGroup.setAttribute('transform', `rotate(${-rollDeg} 150 150) translate(0 ${pitchPx})`);
-    leanNum.textContent = Math.abs(rollDeg).toFixed(0) + '°';
-    leanNum.classList.remove('warn','danger');
-    const abs = Math.abs(rollDeg);
-    if (abs > 40) leanNum.classList.add('danger');
-    else if (abs > 25) leanNum.classList.add('warn');
-    leanSub.textContent = rollDeg.toFixed(0) + '°';
-    pitchSub.textContent = pitchDeg.toFixed(0) + '°';
+  function updatePitchGauge(pitchDeg){
+    pitchNumBig.textContent = Math.abs(pitchDeg).toFixed(0) + '°';
+    pitchLive.setAttribute('transform', `rotate(${pitchDeg} 80 105)`);
+
+    if (Math.abs(pitchDeg) > Math.abs(maxPitch)) maxPitch = pitchDeg;
+    pitchMaxVal.textContent = Math.abs(maxPitch).toFixed(0) + '°';
+    pitchGhost.setAttribute('transform', `rotate(${maxPitch} 80 105)`);
+    pitchGhost.style.opacity = Math.abs(maxPitch) > 0.5 ? 0.85 : 0;
   }
 
   function handleOrientation(e){
     if (e.gamma === null) return;
+    if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) compassHeading = e.webkitCompassHeading;
     const angle = getScreenAngle();
     const comp = compensateOrientation(e.beta || 0, e.gamma, angle);
-    currentLean = comp.roll;
-    currentPitch = comp.pitch;
-    updateHorizon(currentLean, currentPitch);
-    if (Math.abs(currentLean) > Math.abs(maxLean)) {
-      maxLean = currentLean;
-      maxLeanVal.innerHTML = Math.abs(maxLean).toFixed(0) + '<span class="tile-unit">°</span>';
-    }
+    lastRawRoll = comp.roll; lastRawPitch = comp.pitch;
+    currentLean = comp.roll - leanOffset;
+    currentPitch = comp.pitch - pitchOffset;
+    updateLeanGauge(currentLean);
+    updatePitchGauge(currentPitch);
+
     const now = performance.now();
     if (lastGammaForRate !== null && lastGammaTime !== null) {
       const dt = (now - lastGammaTime) / 1000;
@@ -436,15 +501,30 @@
         subLean += (target - subLean) * SCORE_ALPHA;
         lastGammaForRate = currentLean; lastGammaTime = now;
       }
-    } else {
-      lastGammaForRate = currentLean; lastGammaTime = now;
-    }
+    } else { lastGammaForRate = currentLean; lastGammaTime = now; }
+  }
+
+  function updateGforceGauge(fwdG, now){
+    gforceVal.textContent = (fwdG >= 0 ? '+' : '') + fwdG.toFixed(2) + 'g';
+    gforceVal.classList.remove('accel','brake');
+    gforceVal.classList.add(fwdG >= 0 ? 'accel' : 'brake');
+    gforceSubMs.textContent = (fwdG * 9.80665 >= 0 ? '+' : '') + (fwdG * 9.80665).toFixed(2) + ' m/s²';
+
+    const pct = clamp(Math.abs(fwdG) / 1.0 * 50, 0, 50);
+    if (fwdG >= 0) { gBarAccel.style.width = pct + '%'; gBarBrake.style.width = '0%'; }
+    else { gBarBrake.style.width = pct + '%'; gBarAccel.style.width = '0%'; }
+
+    const gp = gPeak(fwdG, now);
+    const ghostPct = clamp(gp.peak / 1.0 * 50, 0, 50);
+    gGhost.style.left = gp.sign >= 0 ? `calc(50% + ${ghostPct}%)` : `calc(50% - ${ghostPct}%)`;
+    gGhost.style.opacity = gp.opacity;
   }
 
   function handleMotion(e){
     const ag = e.accelerationIncludingGravity;
     if (!ag || ag.x === null) return;
     const rx = ag.x || 0, ry = ag.y || 0, rz = ag.z || 0;
+    lastRawAG = { x: rx, y: ry, z: rz };
 
     gEst.x = G_ALPHA * gEst.x + (1 - G_ALPHA) * rx;
     gEst.y = G_ALPHA * gEst.y + (1 - G_ALPHA) * ry;
@@ -453,124 +533,174 @@
 
     const angle = getScreenAngle();
     const comp = compensateAccelXY(lx, ly, angle);
-    // screen-space: comp.y = "up the screen" axis (forward/brake when mounted
-    // with the top of the UI pointing forward), comp.x = "across the screen" (lateral/lean)
     linear.x = comp.x; linear.y = comp.y; linear.z = lz;
 
-    const fwdG = linear.y / 9.81;
-    const latG = linear.x / 9.81;
-    const vertG = linear.z / 9.81;
-
-    accelFwdVal.innerHTML = (fwdG >= 0 ? '+' : '') + fwdG.toFixed(2) + '<span class="tile-unit">g</span>';
-    accelFlag.classList.toggle('show', fwdG > 0.30);
-    brakeFlag.classList.toggle('show', fwdG < -0.30);
-
-    if (fwdG > maxAccelG) maxAccelG = fwdG;
-    if (fwdG < maxBrakeG) {
-      maxBrakeG = fwdG;
-      brakeVal.innerHTML = Math.abs(maxBrakeG).toFixed(2) + '<span class="tile-unit">g</span>';
-    }
+    const fwdG = linear.y / 9.81, latG = linear.x / 9.81, vertG = linear.z / 9.81;
+    updateGforceGauge(fwdG, performance.now());
 
     vertBuf.push(vertG);
     if (vertBuf.length > VERT_BUF_LEN) vertBuf.shift();
     const rms = Math.sqrt(vertBuf.reduce((s,v)=>s+v*v,0) / vertBuf.length);
     const comfortIdx = clamp(100 - rms * 260, 0, 100);
-    suspVal.innerHTML = comfortIdx.toFixed(0) + '<span class="tile-unit">/100</span>';
 
     const accelTarget = 100 - clamp(Math.abs(fwdG) * 140, 0, 100);
     subAccel += (accelTarget - subAccel) * SCORE_ALPHA;
     subComfort += (comfortIdx - subComfort) * SCORE_ALPHA;
-
     const overall = subAccel * 0.40 + subLean * 0.35 + subComfort * 0.25;
     renderScore(overall, subAccel, subLean, subComfort);
 
-    if (recording) {
-      window.__latestTelemetry = { pitch: currentPitch, fwdG, latG, vertG, comfortIdx, score: overall };
-    }
+    if (recording) window.__latestTelemetry = { pitch: currentPitch, fwdG, latG, vertG, comfortIdx, score: overall };
   }
 
   function renderScore(overall, a, l, c){
     scoreNum.textContent = overall.toFixed(0);
     scoreNum.classList.remove('mid','low');
-    if (overall < 55) scoreNum.classList.add('low');
-    else if (overall < 78) scoreNum.classList.add('mid');
-    barAccel.style.width = clamp(a,0,100) + '%'; valAccel.textContent = a.toFixed(0);
-    barLean.style.width = clamp(l,0,100) + '%'; valLean.textContent = l.toFixed(0);
-    barComfort.style.width = clamp(c,0,100) + '%'; valComfort.textContent = c.toFixed(0);
+    if (overall < 55) scoreNum.classList.add('low'); else if (overall < 78) scoreNum.classList.add('mid');
+    valAccel.textContent = a.toFixed(0); valLean.textContent = l.toFixed(0); valComfort.textContent = c.toFixed(0);
+  }
+
+  function zoomForSpeed(kmh){
+    if (kmh == null) return 17;
+    if (kmh > 80) return 14;
+    if (kmh > 50) return 15;
+    if (kmh > 25) return 16;
+    return 17;
+  }
+
+  // dark "ghost" map style — muted roads/labels, bright accents left to the route line
+  const NIGHT_STYLE = [
+    { elementType: "geometry", stylers: [{ color: "#0A1526" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#5C7699" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#050A14" }] },
+    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#17283F" }] },
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#17283F" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#0A1526" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#1C3050" }] },
+    { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#0A1526" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#08111E" }] }
+  ];
+
+  function ensureMap(lat, lon){
+    if (gmap || !window.google) return;
+    mapEmpty.style.display = 'none';
+    gmap = new google.maps.Map(document.getElementById('gmap'), {
+      center: { lat, lng: lon }, zoom: 17, styles: NIGHT_STYLE,
+      disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false
+    });
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      map: gmap, suppressMarkers: true, preserveViewport: true,
+      polylineOptions: { strokeColor: '#5CC8FF', strokeOpacity: 0.95, strokeWeight: 6 }
+    });
+  }
+
+  function updateMap(lat, lon, kmh, heading){
+    if (!gmap) { ensureMap(lat, lon); return; }
+    gmap.setCenter({ lat, lng: lon });
+    gmap.setZoom(zoomForSpeed(kmh));
+    if (heading !== null && heading !== undefined && !isNaN(heading)) {
+      lastHeading = heading;
+      mapArrow.style.transform = `translate(-50%,-50%) rotate(${heading}deg)`;
+    }
   }
 
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
-    currentSpeed = kmh;
     speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="tile-unit">km/h</span>';
+    if (kmh !== null && kmh > maxSpeedKmh) { maxSpeedKmh = kmh; maxSpeedVal.innerHTML = maxSpeedKmh.toFixed(0) + '<span class="tile-unit">km/h</span>'; }
+
+    let heading = null;
+    if (pos.coords.heading !== null && pos.coords.heading !== undefined && !isNaN(pos.coords.heading) && (kmh === null || kmh > 5)) heading = pos.coords.heading;
+    else if (compassHeading !== null) heading = compassHeading;
+    else heading = lastHeading;
+
+    if (lastLat !== null && lastLon !== null) {
+      const dLon = (pos.coords.longitude - lastLon) * Math.cos(lastLat * Math.PI / 180) * 111320;
+      const dLat = (pos.coords.latitude - lastLat) * 110540;
+      const d = Math.hypot(dLon, dLat);
+      if (d > 0.5) totalDistanceM += d;
+    }
     lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
+    distVal.textContent = (totalDistanceM / 1000).toFixed(1);
+
+    updateMap(lastLat, lastLon, kmh, heading);
 
     if (recording) {
       const t = window.__latestTelemetry || {};
       logData.push({
-        t: new Date(pos.timestamp).toISOString(),
-        lat: lastLat, lon: lastLon,
+        t: new Date(pos.timestamp).toISOString(), lat: lastLat, lon: lastLon,
         speed_kmh: kmh !== null ? +kmh.toFixed(1) : '',
-        lean_deg: +currentLean.toFixed(1),
-        pitch_deg: +(t.pitch ?? currentPitch).toFixed(1),
+        heading_deg: heading !== null ? +heading.toFixed(0) : '',
+        lean_deg: +currentLean.toFixed(1), pitch_deg: +(t.pitch ?? currentPitch).toFixed(1),
         accel_fwd_g: t.fwdG !== undefined ? +t.fwdG.toFixed(3) : '',
         accel_lat_g: t.latG !== undefined ? +t.latG.toFixed(3) : '',
         accel_vert_g: t.vertG !== undefined ? +t.vertG.toFixed(3) : '',
         comfort_idx: t.comfortIdx !== undefined ? +t.comfortIdx.toFixed(0) : '',
         score: t.score !== undefined ? +t.score.toFixed(0) : ''
       });
-      pointsVal.textContent = logData.length;
     }
   }
 
   async function requestPermissions(){
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
       const res = await DeviceOrientationEvent.requestPermission();
       if (res !== 'granted') throw new Error('Permesso orientamento negato');
     }
-    if (typeof DeviceMotionEvent !== 'undefined' &&
-        typeof DeviceMotionEvent.requestPermission === 'function') {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
       const res2 = await DeviceMotionEvent.requestPermission();
       if (res2 !== 'granted') throw new Error('Permesso movimento negato');
     }
     return true;
   }
 
-  async function start(){
-    mainBtn.disabled = true;
-    mainBtn.textContent = '…';
-    try {
-      await requestPermissions();
-    } catch(err) {
-      logInfo.textContent = 'Permesso negato — Impostazioni > Safari.';
-      mainBtn.disabled = false;
-      mainBtn.textContent = 'Riprova';
-      return;
-    }
-
+  async function ensureSensors(){
+    if (sensorsActive) return true;
+    try { await requestPermissions(); }
+    catch (err) { logInfo.textContent = 'Permesso negato — Impostazioni > Safari.'; return false; }
     window.addEventListener('deviceorientation', handleOrientation, true);
     window.addEventListener('devicemotion', handleMotion, true);
+    sensorsActive = true;
+    return true;
+  }
+
+  calibBtn.addEventListener('click', async () => {
+    calibBtn.disabled = true;
+    const ok = await ensureSensors();
+    calibBtn.disabled = false;
+    if (!ok) return;
+    leanOffset = lastRawRoll;
+    pitchOffset = lastRawPitch;
+    if (lastRawAG) { gEst.x = lastRawAG.x; gEst.y = lastRawAG.y; gEst.z = lastRawAG.z; }
+    logInfo.textContent = 'Sensori azzerati ✓';
+    setTimeout(() => { if (!recording) logInfo.textContent = ''; }, 1800);
+  });
+
+  async function start(){
+    mainBtn.disabled = true; mainBtn.textContent = '…';
+    const ok = await ensureSensors();
+    if (!ok) { mainBtn.disabled = false; mainBtn.textContent = 'Riprova'; return; }
 
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(handlePosition, (err) => {
         logInfo.textContent = 'GPS non disponibile: ' + err.message;
-      }, { enableHighAccuracy: true, maximumAge: 500, timeout: 8000 });
+      }, { enableHighAccuracy:true, maximumAge:500, timeout:8000 });
     }
 
     recording = true;
     logData = [];
-    maxLean = 0; maxBrakeG = 0; maxAccelG = 0;
+    maxLean = 0; maxPitch = 0; maxSpeedKmh = 0;
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
-    pointsVal.textContent = '0';
-    brakeVal.innerHTML = '--<span class="tile-unit">g</span>';
+    totalDistanceM = 0; lastLat = null; lastLon = null;
+    distVal.textContent = '0.0';
+    maxSpeedVal.innerHTML = '--<span class="tile-unit">km/h</span>';
     setStatus(true, 'REGISTRA');
     permNote.style.display = 'none';
 
     mainBtn.textContent = 'Ferma';
-    mainBtn.classList.remove('btn-start');
-    mainBtn.classList.add('btn-stop');
+    mainBtn.classList.remove('start'); mainBtn.classList.add('stop');
     mainBtn.disabled = false;
     exportBtn.disabled = true;
     logInfo.textContent = '';
@@ -581,8 +711,7 @@
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     setStatus(false, 'FERMO');
     mainBtn.textContent = 'Avvia';
-    mainBtn.classList.remove('btn-stop');
-    mainBtn.classList.add('btn-start');
+    mainBtn.classList.remove('stop'); mainBtn.classList.add('start');
     exportBtn.disabled = logData.length === 0;
     logInfo.textContent = logData.length + ' punti pronti.';
   }
@@ -591,23 +720,23 @@
 
   exportBtn.addEventListener('click', () => {
     if (logData.length === 0) return;
-    const header = 'timestamp,lat,lon,speed_kmh,lean_deg,pitch_deg,accel_fwd_g,accel_lat_g,accel_vert_g,comfort_idx,score\n';
-    const rows = logData.map(r =>
-      `${r.t},${r.lat},${r.lon},${r.speed_kmh},${r.lean_deg},${r.pitch_deg},${r.accel_fwd_g},${r.accel_lat_g},${r.accel_vert_g},${r.comfort_idx},${r.score}`
-    ).join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const header = 'timestamp,lat,lon,speed_kmh,heading_deg,lean_deg,pitch_deg,accel_fwd_g,accel_lat_g,accel_vert_g,comfort_idx,score\n';
+    const rows = logData.map(r => `${r.t},${r.lat},${r.lon},${r.speed_kmh},${r.heading_deg},${r.lean_deg},${r.pitch_deg},${r.accel_fwd_g},${r.accel_lat_g},${r.accel_vert_g},${r.comfort_idx},${r.score}`).join('\n');
+    const blob = new Blob([header + rows], { type:'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `telemetria_moto_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = `telemetria_moto_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
+
+  window.addEventListener('orientationchange', () => { if (gmap) setTimeout(() => google.maps.event.trigger(gmap, 'resize'), 300); });
 
   setStatus(false, 'FERMO');
 })();
 </script>
+
+<!-- Sostituisci YOUR_GOOGLE_MAPS_API_KEY con la tua chiave (vedi README) -->
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&v=weekly" defer></script>
 </body>
 </html>

@@ -1,30 +1,35 @@
 # Telemetria Moto
 
-Piccola PWA per visualizzare e registrare la telemetria di un giro in moto direttamente da iPhone: piega, beccheggio, accelerazione/frenata, indice di vibrazione/assetto, punteggio di guida. Landscape only.
+PWA per telemetria in tempo reale su iPhone durante un giro in moto: piega, beccheggio, accelerazione/frenata in g e m/s², velocità, punteggio di guida, navigatore con percorso evidenziato su Google Maps. Landscape only.
 
-## Come pubblicarla (GitHub Pages)
+## Setup — chiave Google Maps (obbligatoria per la mappa)
 
-1. Crea un repo pubblico su GitHub (es. `moto-telemetry`)
-2. Carica il contenuto di questa cartella (in particolare `index.html` deve stare nella root del repo)
-3. Vai su **Settings → Pages**
-4. In "Source" scegli **Deploy from a branch**, branch **main**, cartella **/ (root)**
-5. Salva e aspetta 1-2 minuti: l'URL sarà tipo `https://<tuo-utente>.github.io/moto-telemetry/`
+1. Vai su https://console.cloud.google.com/ e crea un progetto (o usane uno esistente)
+2. In **API e servizi → Libreria**, abilita:
+   - **Maps JavaScript API**
+   - **Directions API**
+3. In **API e servizi → Credenziali**, crea una **Chiave API**
+4. (Consigliato) Limita la chiave: **Restrizioni applicazione → Referrer HTTP** e aggiungi `https://<tuo-utente>.github.io/*`
+5. Apri `index.html`, cerca `YOUR_GOOGLE_MAPS_API_KEY` (ultima riga del file) e sostituiscilo con la tua chiave
+6. Fai commit/push
 
-## Come usarla su iPhone
+Il livello gratuito di Google copre ampiamente un uso personale come questo (soglia mensile di credito inclusa).
 
-1. Apri l'URL sopra **direttamente in Safari** (non da dentro altre app)
-2. Ruota il telefono in orizzontale — l'interfaccia è ottimizzata solo per landscape
-3. Tocca **Avvia** e concedi i permessi per movimento/orientamento e posizione quando richiesti
-4. A fine giro tocca **CSV** per esportare i dati registrati
+## Pubblicazione (GitHub Pages)
 
-### Per usarla come una vera app (icona in home)
+Repo pubblico → Settings → Pages → Deploy from a branch → main → / (root). URL risultante: `https://<tuo-utente>.github.io/moto-telemetry/`
 
-1. Apri l'URL in Safari
-2. Tocca l'icona di condivisione → **Aggiungi a Home**
-3. Da quel momento la apri dall'icona, a schermo intero, senza barra Safari
+## Uso su iPhone
+
+1. Apri l'URL **direttamente in Safari** (non da dentro altre app)
+2. Landscape, blocco rotazione disattivato
+3. **Calibra** a moto ferma, poi **Avvia**
+4. Tocca l'icona 🧭 sulla mappa per impostare una destinazione e vedere il percorso evidenziato
+5. A fine giro: **CSV** per esportare i dati
 
 ## Note tecniche
 
-- Piega e beccheggio vengono compensati automaticamente in base all'orientamento fisico dello schermo (`screen.orientation.angle`), quindi restano corretti sia con telefono montato verticale che orizzontale.
-- L'indice "Vibrazione/Assetto" è una stima basata sull'accelerazione verticale dello chassis (RMS mobile), non una misura di laboratorio dello smorzamento reale delle sospensioni.
-- Il GPS richiede un contesto sicuro (HTTPS) — per questo va ospitato (GitHub Pages va benissimo) e non aperto da file locale.
+- La mappa resta orientata a nord fisso (non ruota con la direzione di marcia): ruotarla via CSS nasconderebbe il logo Google e i Termini, obbligatori per contratto. La freccia arancione ruota invece per indicarti la direzione.
+- Piega e beccheggio: la sagoma della moto/rider mostra il valore istantaneo, il "ghost" trasparente mostra il massimo raggiunto durante tutta la sessione (persistente, non svanisce).
+- Il picco della forza G invece è a scomparsa (~2,4s) perché è più utile vedere l'ultima frenata/accelerata forte che il massimo dell'intera sessione.
+- "Assetto" (indice vibrazioni) resta calcolato internamente per il punteggio di guida ma non è più mostrato come tile separato.

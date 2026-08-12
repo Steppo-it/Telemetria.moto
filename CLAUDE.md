@@ -1,0 +1,119 @@
+# Telemetria Moto — CLAUDE.md
+
+Documento di contesto per Claude Code (o chiunque riprenda il progetto in VS Code). Contiene tutto quello che serve per capire cosa è stato costruito, come, e perché, senza dover rileggere l'intera cronologia della chat originale.
+
+## Cos'è
+
+Una PWA (single-page, single-file) per iPhone che, montata sul cruscotto/manubrio di una moto, mostra e registra in tempo reale: angolo di piega, beccheggio, accelerazione/frenata, velocità GPS, un punteggio di guida calcolato, e una mappa di navigazione con percorso evidenziato. Pensata per essere usata **in marcia**, con telefono fisso su supporto, schermo sempre visibile, landscape only.
+
+Non è un progetto con build system, bundler o package manager: è **un solo file HTML** (`index.html`) con CSS e JS inline, pensato per essere servito staticamente via GitHub Pages. Nessuna dipendenza da installare lato sviluppo.
+
+## Stack tecnico
+
+- **Nessun framework** — HTML/CSS/JS vanilla, tutto in un file.
+- **Google Maps JavaScript API + Directions API** — mappa e calcolo percorso (richiede una API key dell'utente, vedi sotto).
+- **Geolocation API** (`navigator.geolocation.watchPosition`) — posizione, velocità, direzione (heading).
+- **DeviceOrientationEvent / DeviceMotionEvent** — piega, beccheggio, accelerazione (richiedono permesso esplicito su iOS 13+ via `requestPermission()`, deve partire da un tap diretto dell'utente).
+- **localStorage** — persistenza di due preferenze utente (dimensione mappa, stile mappa). Nota: questo NON è un artifact di Claude.ai, gira su una pagina servita esternamente via GitHub Pages, quindi `localStorage` è pienamente supportato (a differenza degli artifact in claude.ai dove è vietato).
+- **Font esterni**: Google Fonts (Orbitron per i numeri grandi/display, JetBrains Mono per i dati, Inter per testo secondario).
+- **Hosting**: GitHub Pages (repo pubblico — Pages su repo privati richiede un piano a pagamento).
+
+## Struttura del file
+
+`index.html` (~740 righe) è organizzato in tre blocchi:
+1. `<style>` — tutte le variabili CSS in `:root` (colori, font) + layout
+2. `<body>` — markup statico di tutti i pannelli/gauge/popover
+3. `<script>` — un'unica IIFE con tutta la logica, più il tag `<script>` di Google Maps in fondo alla pagina (con `defer`, carica dopo lo script principale ma prima che l'utente possa interagire)
+
+Non ci sono altri file JS/CSS esterni al progetto oltre a Leaflet (rimosso) → ora solo Google Maps via CDN ufficiale Google.
+
+## Setup per sviluppo locale
+
+Non serve build. Per sviluppare:
+1. Apri `index.html` in un editor
+2. Per testare nel browser desktop: un semplice server statico basta (`python3 -m http.server` nella cartella, poi apri `localhost:8000`). **Attenzione**: sensori (DeviceOrientation/Motion) e spesso anche GPS ad alta precisione richiedono un contesto reale su dispositivo mobile — il desktop è utile solo per verificare che non ci siano errori JS e che la mappa carichi.
+3. Per testare su iPhone davvero: serve HTTPS (Safari blocca Geolocation su `http://` e su `file://`). In sviluppo, il modo più comodo resta pushare su GitHub Pages e aprire l'URL pubblico da Safari — non da webview integrate in altre app (bug noto, vedi sotto).
+
+## Setup chiave Google Maps (obbligatorio)
+
+La mappa **non funziona** senza una chiave valida. Nel file, in fondo, c'è:
+```html
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&v=weekly" defer></script>
+```
+Va sostituito `YOUR_GOOGLE_MAPS_API_KEY` con una chiave reale creata su [Google Cloud Console](https://console.cloud.google.com/), con **Maps JavaScript API** e **Directions API** abilitate sul progetto, **billing attivo** (richiesto anche per restare nel piano gratuito), e idealmente con restrizione **HTTP referrer** limitata al dominio GitHub Pages del progetto (`https://<utente>.github.io/*`) — la chiave finisce in un repo pubblico quindi la restrizione è l'unica vera protezione.
+
+## Deploy
+
+GitHub Pages, repo **pubblico** (Pages su repo privati richiede piano Team/Enterprise). Settings → Pages → Deploy from a branch → `main` → `/ (root)`. `index.html` deve stare nella root del repo (non in una sottocartella) perché GitHub Pages lo serve automaticamente come pagina principale.
+
+## Come si usa (flusso utente reale)
+
+1. Monta il telefono su supporto, landscape, con la sezione inferiore destra dello schermo intenzionalmente **dietro/coperta dal quadro strumenti della moto** (vincolo fisico noto e voluto — vedi sezione Layout).
+2. Apri l'URL GitHub Pages **direttamente in Safari** (non dentro webview di altre app — vedi Problemi noti).
+3. Tocca **Calibra** a moto ferma e in verticale: azzera l'offset di piega/beccheggio (utile se il supporto non è perfettamente livellato) e resetta la stima di gravità dell'accelerometro.
+4. Tocca **Avvia**: richiede i permessi sensori/posizione (se non già concessi), inizia a tracciare GPS e a loggare i dati.
+5. Guida. I gauge grandi (piega, G-force, beccheggio) sono pensati per essere leggibili a colpo d'occhio anche a velocità sostenuta.
+6. Facoltativo: tocca l'icona 🧭 sulla mappa per impostare una destinazione — disegna il percorso come linea evidenziata.
+7. A fine giro: **Ferma**, poi **CSV** per esportare i dati registrati (scarica un file via Safari, l'utente lo recupera dall'app File).
+
+## Funzionalità implementate
+
+### Sensori e calcolo dati
+
+- **Piega (roll)** e **Beccheggio (pitch)**: letti da `deviceorientation` (`beta`/`gamma`), **compensati per l'orientamento fisico dello schermo** (`screen.orientation.angle`) tramite la funzione `compensateOrientation()` — necessario perché il telefono può essere montato sia verticale che orizzontale e i valori grezzi del sensore non seguono automaticamente la rotazione dell'interfaccia.
+- **Accelerazione/frenata**: da `devicemotion.accelerationIncludingGravity`, con **filtro passa-basso per stimare e sottrarre la componente di gravità** (tecnica standard tipo "gravity sensor" software, vedi `gEst` e `G_ALPHA = 0.85` nel codice), poi compensata per orientamento schermo (`compensateAccelXY()`). L'asse Y del dispositivo (dopo compensazione) è trattato come longitudinale (avanti/freno), X come laterale, Z come verticale.
+- **Indice "Assetto"/comfort**: RMS mobile dell'accelerazione verticale su una finestra di 40 campioni, mappato 0–100. **Stima**, non una misura reale di smorzamento sospensioni (richiederebbe un sensore sulla ruota). Calcolato internamente per il punteggio ma non più mostrato come tile a sé (rimosso su richiesta utente).
+- **Punteggio di guida**: tre sotto-punteggi con media mobile esponenziale (`SCORE_ALPHA = 0.03`): fluidità accelerazione/frenata (40%), pulizia in piega — basata sulla velocità angolare del roll (35%), compostezza/comfort verticale (25%).
+- **Calibrazione**: il bottone "Calibra" cattura gli ultimi valori grezzi (`lastRawRoll`, `lastRawPitch`, `lastRawAG`) e li usa come nuovo zero (`leanOffset`, `pitchOffset`, reset di `gEst`). I sensori restano "sempre attivi" una volta concessi i permessi — non sono legati al ciclo Avvia/Ferma, che controlla solo GPS + logging (vedi `ensureSensors()` vs `start()`/`stop()`).
+
+### Gauge "in stile moto" (piega e beccheggio)
+
+Entrambi condividono la stessa logica e lo stesso pattern visivo:
+- Una sagoma SVG stilizzata (moto+rider vista da dietro per la piega, vista laterale per il beccheggio) che ruota in tempo reale attorno a un pivot, proporzionalmente all'angolo corrente.
+- Un numero grande (font Orbitron) con il valore assoluto in gradi, colorato blu/ambra/rosso sopra soglia (25°/40° per la piega — soglie arbitrarie, punto di partenza da tarare in base al feedback reale).
+- Un "ghost": sagoma semi-trasparente **persistente per tutta la sessione** che mostra il valore massimo raggiunto (non svanisce — comportamento diverso dal picco della forza G, vedi sotto). Si resetta a ogni **Avvia**.
+- **Nota importante sul verso**: il segno di rotazione della piega è stato corretto una volta (era invertito rispetto alla realtà) cambiando `rotate(${rollDeg}...)` in `rotate(${-rollDeg}...)` in `updateLeanGauge()`. Il beccheggio non è stato ancora validato su strada — se risulta invertito, stessa modifica di una riga in `updatePitchGauge()`.
+
+### G-force (accelerazione/frenata)
+
+Barra orizzontale centrata sullo zero: si riempie verso destra (blu) in accelerazione, verso sinistra (rosso) in frenata. Mostra il valore sia in **g** che in **m/s²** (conversione diretta `g * 9.80665`). A differenza dei gauge piega/beccheggio, qui il "ghost" (marcatore bianco) è **a scomparsa**: mostra il picco recente per ~2,4 secondi (`makePeakHold(1400, 1000)` — hold 1.4s poi fade 1s) e poi si riarma sul valore corrente. Scelta deliberata: per la forza G è più utile vedere "quanto ho appena frenato" che il massimo dell'intera sessione.
+
+### Mappa e navigazione
+
+- **Google Maps JS API**, stile custom scuro/blu (array `NIGHT_STYLE` nel codice) per un effetto "notturno/ghost" coerente col resto del tema.
+- Mappa **orientata a nord fisso** (non ruota con la direzione di marcia). Scelta deliberata e non un compromesso tecnico dimenticato: ruotare l'intera mappa via CSS (come si faceva con la versione precedente basata su Leaflet+OpenStreetMap) nasconderebbe/distorcerebbe il logo Google e il link ai Termini, che Google richiede restino sempre visibili per contratto. La direzione di marcia è invece indicata dalla **freccia arancione che ruota** sopra la mappa fissa.
+- **Ridimensionabile via drag**: una maniglia (`#resizeHandle`) tra mappa e colonna HUD, trascinabile con Pointer Events, aggiorna una CSS custom property `--map-pct` in tempo reale. Persistita in `localStorage` (`moto_map_pct`).
+- **Navigazione**: icona 🧭 apre un popover con un campo di testo libero (nessun autocomplete/Places, solo geocoding diretto via `DirectionsService`, che accetta stringhe di indirizzo). Il percorso viene disegnato come polyline blu luminosa (`DirectionsRenderer` con `polylineOptions` custom, `suppressMarkers:true`).
+- **Versione precedente (superata)**: prima di Google Maps c'era una minimappa con traccia GPS auto-disegnata (nessuna dipendenza esterna, funzionava offline) e poi una mappa OSM via Leaflet con rotazione CSS heading-up. Entrambe sostituite per limiti funzionali (niente routing reale) o di conformità (rotazione + attribuzione). Se in futuro serve una modalità completamente offline, quell'approccio è il punto di partenza da recuperare (vedi cronologia se necessario, ma il codice attuale non lo contiene più).
+
+### Layout / UX pensata per l'uso in marcia
+
+- **Landscape only**: se il telefono è in portrait, viene mostrato un overlay "ruota il telefono" (`@media (orientation: portrait)`) invece dell'interfaccia.
+- **Tre zone funzionali**, vincolo derivato da un caso reale: quando il telefono è montato su alcune moto, la porzione **in basso a destra dello schermo risulta fisicamente coperta dal quadro strumenti**. Quella zona (`.hud-bottom`) contiene quindi i controlli più critici — Avvia/Ferma, Calibra — resi **grandi e ben distanziati apposta per essere premuti "alla cieca"**, per tatto, senza bisogno di vederli. "Impostazioni" e "CSV" sono più piccoli e in fondo, perché vengono usati solo a telefono staccato dal supporto.
+- Font monospazio per i dati tecnici, Orbitron per i numeri "hero" (piega, punteggio) — tema "digitale/futuristico" con accenti blu elettrico, griglia di sfondo sottile in stile blueprint, glow leggeri sui bordi.
+
+## Formato export CSV
+
+Colonne, una riga per ogni fix GPS ricevuto durante una sessione di registrazione:
+```
+timestamp, lat, lon, speed_kmh, heading_deg, lean_deg, pitch_deg, accel_fwd_g, accel_lat_g, accel_vert_g, comfort_idx, score
+```
+`accel_fwd_g`/`accel_lat_g`/`accel_vert_g` sono presi dall'ultimo campione `devicemotion` disponibile al momento del fix GPS (i due sensori non sono sincronizzati, GPS aggiorna a ~1Hz, motion molto più spesso — si prende sempre il valore più recente).
+
+## Problemi noti / cose da verificare su strada
+
+1. **Verso del beccheggio non validato** — vedi sopra, correzione di una riga se necessario in `updatePitchGauge()`.
+2. **Apertura da webview integrata** — se l'app viene aperta tramite un link condiviso dentro un'app che usa una webview interna (non Safari "vero"), i permessi di sensori/posizione possono essere negati o limitati anche se il sito è servito in HTTPS. Va sempre aperta da Safari come sito a sé stante.
+3. **Soglie del punteggio e dei colori warn/danger** (25°/40° piega, 0.30g accelerazione/frenata, pesi 40/35/25 del punteggio) sono punti di partenza ragionevoli ma arbitrari, non calibrati su dati reali.
+4. **Chiave Google Maps esposta lato client** — inevitabile per un'app client-side pura, ma **deve** avere la restrizione HTTP referrer impostata (vedi Setup), altrimenti chiunque trovi la chiave nel repo pubblico può usarla a proprie spese.
+5. **Copertura del quadro strumenti**: le dimensioni/posizioni esatte dei bottoni grandi in `.hud-bottom` sono state tarate su un caso reale specifico (foto fornita durante lo sviluppo) ma potrebbero necessitare aggiustamenti fini su altre moto/supporti.
+6. **Mappa offline**: con Google Maps, senza connessione dati la mappa non carica (tile scaricati al volo). Il resto dell'app (sensori, GPS, log, export) funziona comunque regolarmente.
+7. **Nessun salvataggio persistente delle sessioni**: i dati registrati vivono solo in memoria (`logData` array) fino all'export CSV manuale — chiudere/ricaricare la pagina durante una registrazione perde tutto. Se serve resilienza (es. salvataggio incrementale), andrebbe aggiunto `localStorage`/IndexedDB.
+
+## Possibili sviluppi futuri (non implementati)
+
+- Vista riepilogo post-giro (mappa con traccia percorsa + grafici da CSV) — attualmente il CSV va analizzato altrove (Excel, ecc.).
+- Salvataggio incrementale della sessione per resilienza a crash/ricarica.
+- Calibrazione assistita con feedback visivo invece di un semplice tap.
+- Modalità mappa offline (la vecchia traccia GPS auto-disegnata, o tile scaricati in anticipo).
+- Autocomplete indirizzi nel navigatore (richiederebbe Places API, chiave aggiuntiva/costi aggiuntivi).
