@@ -34,11 +34,10 @@
   body {
     display:flex; flex-direction:column;
     min-height:100vh;
-    padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     overflow: hidden;
   }
 
-  /* --- rotate hint (shown only in portrait) --- */
   .rotate-hint { display:none; }
   @media (orientation: portrait) {
     .rotate-hint {
@@ -57,28 +56,15 @@
     display:flex; justify-content:space-between; align-items:center;
     margin-bottom: 6px; flex: 0 0 auto;
   }
-  .brand {
-    font-family: var(--disp);
-    font-size: 18px;
-    letter-spacing: 1.5px;
-    color: var(--text);
-  }
+  .brand { font-family: var(--disp); font-size: 18px; letter-spacing: 1.5px; color: var(--text); }
   .brand span { color: var(--cyan); }
-  .status-dot {
-    width:8px; height:8px; border-radius:50%;
-    background: var(--muted);
-    transition: all .3s;
-  }
-  .status-dot.live {
-    background: var(--red);
-    box-shadow: 0 0 10px 2px rgba(255,68,54,.6);
-    animation: pulse 1.4s infinite;
-  }
+  .status-dot { width:8px; height:8px; border-radius:50%; background: var(--muted); transition: all .3s; }
+  .status-dot.live { background: var(--red); box-shadow: 0 0 10px 2px rgba(255,68,54,.6); animation: pulse 1.4s infinite; }
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
   .status-row { display:flex; align-items:center; gap:7px; font-family: var(--mono); font-size:11px; color: var(--muted); }
 
   .perm-note {
-    font-size: 10.5px; color: var(--muted); line-height:1.4;
+    font-size: 10px; color: var(--muted); line-height:1.4;
     background: var(--panel); border:1px solid var(--panel-edge);
     border-radius: 8px; padding: 6px 10px; margin-bottom: 6px;
     flex: 0 0 auto;
@@ -86,9 +72,36 @@
   .perm-note b { color: var(--text); }
 
   .layout {
-    display:flex; flex-direction:row; gap:12px;
+    display:flex; flex-direction:row; gap:10px;
     flex: 1 1 auto; min-height:0;
   }
+
+  /* --- mini map --- */
+  .col-map {
+    flex: 0 0 min(20vw, 115px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:5px; min-width:0;
+  }
+  .map-wrap {
+    position:relative;
+    width:100%;
+    aspect-ratio: 1/1;
+    border-radius: 10px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    overflow:hidden;
+  }
+  .map-wrap svg { display:block; width:100%; height:100%; }
+  .map-north {
+    position:absolute; top:4px; left:50%; transform:translateX(-50%);
+    font-family: var(--mono); font-size: 8px; letter-spacing:1px; color: var(--muted);
+  }
+  .map-empty {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family: var(--mono); font-size: 8px; color: var(--muted); text-align:center; padding:8px;
+  }
+  .map-dist { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align:center; }
+  .map-dist b { color: var(--text); }
 
   .col-horizon {
     flex: 0 0 auto;
@@ -97,7 +110,7 @@
   }
   .horizon-wrap {
     position:relative;
-    width: min(32vw, 78vh, 260px);
+    width: min(26vw, 62vh, 200px);
     aspect-ratio: 1/1;
     border-radius: 50%;
     background: var(--panel);
@@ -106,98 +119,58 @@
     box-shadow: inset 0 0 40px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02);
   }
   .horizon-wrap svg { display:block; width:100%; height:100%; }
-  .lean-readout {
-    position:absolute; top:50%; left:50%;
-    transform: translate(-50%,-50%);
-    text-align:center; pointer-events:none; z-index:5;
-  }
+  .lean-readout { position:absolute; top:50%; left:50%; transform: translate(-50%,-50%); text-align:center; pointer-events:none; z-index:5; }
   .lean-num {
-    font-family: var(--mono); font-weight:700;
-    font-size: 44px; line-height:1;
-    color: var(--cyan);
-    text-shadow: 0 0 20px rgba(0,229,212,.35);
-    transition: color .2s;
+    font-family: var(--mono); font-weight:700; font-size: 38px; line-height:1;
+    color: var(--cyan); text-shadow: 0 0 20px rgba(0,229,212,.35); transition: color .2s;
   }
   .lean-num.warn { color: var(--amber); text-shadow: 0 0 20px rgba(255,138,30,.4); }
   .lean-num.danger { color: var(--red); text-shadow: 0 0 20px rgba(255,68,54,.5); }
-  .lean-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; color: var(--muted); margin-top: 2px; }
+  .lean-label { font-family: var(--mono); font-size: 8.5px; letter-spacing: 1.5px; color: var(--muted); margin-top: 2px; }
 
-  .attitude-sub {
-    display:flex; justify-content:center; gap:16px;
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
-  }
-  .attitude-sub b { color: var(--text); font-size: 13px; }
+  .attitude-sub { display:flex; justify-content:center; gap:14px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .attitude-sub b { color: var(--text); font-size: 12px; }
 
-  .col-mid {
-    flex: 1 1 auto; min-width:0;
-    display:flex; flex-direction:column; justify-content:center;
-  }
-  .grid {
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:8px;
-  }
-  .tile {
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 9px;
-    padding: 8px 11px;
-    position:relative;
-  }
-  .tile-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
-  .tile-val { font-family: var(--mono); font-size: 20px; font-weight: 600; margin-top: 2px; color: var(--text); }
-  .tile-unit { font-size: 11px; color: var(--muted); margin-left: 3px; }
+  .col-mid { flex: 1 1 auto; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:7px; }
+  .tile { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 9px; padding: 7px 10px; position:relative; }
+  .tile-label { font-family: var(--mono); font-size: 8.5px; letter-spacing: 1.1px; color: var(--muted); text-transform: uppercase; }
+  .tile-val { font-family: var(--mono); font-size: 18px; font-weight: 600; margin-top: 2px; color: var(--text); }
+  .tile-unit { font-size: 10px; color: var(--muted); margin-left: 3px; }
   .tile-flag {
-    position:absolute; top:8px; right:9px;
-    font-family: var(--mono); font-size: 8.5px; letter-spacing:.5px;
-    padding: 2px 5px; border-radius: 5px;
-    background: rgba(255,68,54,.15); color: var(--red);
+    position:absolute; top:7px; right:8px; font-family: var(--mono); font-size: 8px; letter-spacing:.5px;
+    padding: 2px 5px; border-radius: 5px; background: rgba(255,68,54,.15); color: var(--red);
     opacity:0; transition: opacity .2s;
   }
   .tile-flag.show { opacity:1; }
 
-  .col-side {
-    flex: 0 0 220px;
-    display:flex; flex-direction:column; justify-content:center; gap:8px;
-    min-width:0;
-  }
-  .score-card {
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 10px;
-    padding: 10px 13px 12px;
-  }
+  .col-side { flex: 0 0 min(26vw, 200px); display:flex; flex-direction:column; justify-content:center; gap:7px; min-width:0; }
+  .score-card { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 10px; padding: 9px 12px 11px; }
   .score-top { display:flex; align-items:baseline; justify-content:space-between; }
-  .score-title { font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.3px; color: var(--muted); text-transform:uppercase; }
-  .score-num { font-family: var(--mono); font-weight:700; font-size: 28px; color: var(--green); }
+  .score-title { font-family: var(--mono); font-size: 9px; letter-spacing: 1.2px; color: var(--muted); text-transform:uppercase; }
+  .score-num { font-family: var(--mono); font-weight:700; font-size: 25px; color: var(--green); }
   .score-num.mid { color: var(--amber); }
   .score-num.low { color: var(--red); }
-  .subscores { margin-top: 7px; display:flex; flex-direction:column; gap:5px; }
-  .subrow { display:grid; grid-template-columns: 78px 1fr 24px; align-items:center; gap:6px; }
-  .subrow-label { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .subscores { margin-top: 6px; display:flex; flex-direction:column; gap:5px; }
+  .subrow { display:grid; grid-template-columns: 70px 1fr 22px; align-items:center; gap:6px; }
+  .subrow-label { font-family: var(--mono); font-size: 8.5px; color: var(--muted); }
   .subbar-track { height:4px; border-radius:3px; background:#20242A; overflow:hidden; }
   .subbar-fill { height:100%; border-radius:3px; background: var(--cyan); transition: width .3s; }
-  .subrow-val { font-family: var(--mono); font-size: 10px; color: var(--text); text-align:right; }
+  .subrow-val { font-family: var(--mono); font-size: 9.5px; color: var(--text); text-align:right; }
 
-  .actions { display:flex; flex-direction:row; gap:8px; }
+  .actions { display:flex; flex-direction:row; gap:7px; }
   .btn {
-    appearance:none; border:none; border-radius: 10px;
-    padding: 11px; font-family: var(--disp); font-size: 15px; letter-spacing: .8px;
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    cursor:pointer; transition: transform .1s, opacity .2s;
-    flex: 1 1 auto;
+    appearance:none; border:none; border-radius: 10px; padding: 10px; font-family: var(--disp); font-size: 14px; letter-spacing: .8px;
+    display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; transition: transform .1s, opacity .2s; flex: 1 1 auto;
   }
   .btn:active { transform: scale(0.98); }
   .btn-start { background: linear-gradient(135deg, var(--cyan), #00A99D); color: #06110F; }
   .btn-stop { background: linear-gradient(135deg, var(--red), #B8221A); color: #1A0303; }
-  .btn-ghost {
-    background: transparent; border: 1px solid var(--panel-edge); color: var(--muted);
-    font-family: 'Inter', sans-serif; font-weight:500; font-size:12px; padding: 10px;
-  }
+  .btn-ghost { background: transparent; border: 1px solid var(--panel-edge); color: var(--muted); font-family: 'Inter', sans-serif; font-weight:500; font-size:11px; padding: 9px; }
   .btn-ghost:disabled { opacity:.4; }
   .btn[disabled] { opacity:.5; pointer-events:none; }
 
-  .log-info { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align:center; }
+  .log-info { font-family: var(--mono); font-size: 9.5px; color: var(--muted); text-align:center; }
 </style>
 </head>
 <body>
@@ -207,7 +180,7 @@
       <rect x="5" y="2" width="14" height="20" rx="2"/>
       <line x1="12" y1="18" x2="12" y2="18.01"/>
     </svg>
-    <p>Ruota il telefono in orizzontale — l'app è ottimizzata solo per landscape. Controlla anche che il blocco rotazione (Centro di Controllo) sia disattivato.</p>
+    <p>Ruota il telefono in orizzontale — l'app è ottimizzata solo per landscape. Controlla anche che il blocco rotazione sia disattivato.</p>
   </div>
 
   <div class="app">
@@ -220,16 +193,28 @@
     </div>
 
     <div class="perm-note" id="permNote">
-      Supporto fisso, schermo acceso. Concedi i permessi <b>movimento/orientamento</b> e <b>posizione</b>. Smorzamento = indice stimato dalle vibrazioni, non misura di laboratorio.
+      Supporto fisso, schermo acceso. Concedi i permessi <b>movimento/orientamento</b> e <b>posizione</b>. Smorzamento = indice stimato dalle vibrazioni.
     </div>
 
     <div class="layout">
+
+      <div class="col-map">
+        <div class="map-wrap">
+          <div class="map-north">N</div>
+          <svg viewBox="0 0 200 200" id="mapSvg">
+            <polyline id="mapTrack" points="" fill="none" stroke="#00E5D4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+            <circle id="mapStart" cx="0" cy="0" r="3" fill="#6B7480" stroke="#0A0C0F" stroke-width="1" vector-effect="non-scaling-stroke" style="display:none"/>
+            <circle id="mapPos" cx="0" cy="0" r="4" fill="#FF8A1E" stroke="#0A0C0F" stroke-width="1.2" vector-effect="non-scaling-stroke" style="display:none"/>
+          </svg>
+          <div class="map-empty" id="mapEmpty">In attesa GPS…</div>
+        </div>
+        <div class="map-dist"><b id="distVal">0.0</b> km</div>
+      </div>
+
       <div class="col-horizon">
         <div class="horizon-wrap">
           <svg viewBox="0 0 300 300" id="horizonSvg">
-            <defs>
-              <clipPath id="circleClip"><circle cx="150" cy="150" r="149"/></clipPath>
-            </defs>
+            <defs><clipPath id="circleClip"><circle cx="150" cy="150" r="149"/></clipPath></defs>
             <g clip-path="url(#circleClip)">
               <g id="horizonGroup" transform-origin="150 150">
                 <rect x="-150" y="-450" width="600" height="600" fill="#0E2A33"/>
@@ -338,6 +323,8 @@
   const barAccel = $('barAccel'), valAccel = $('valAccel');
   const barLean = $('barLean'), valLean = $('valLean');
   const barComfort = $('barComfort'), valComfort = $('valComfort');
+  const mapTrack = $('mapTrack'), mapStart = $('mapStart'), mapPos = $('mapPos');
+  const mapSvg = $('mapSvg'), mapEmpty = $('mapEmpty'), distVal = $('distVal');
 
   for (let a = -60; a <= 60; a += 15) {
     if (a === 0) continue;
@@ -359,9 +346,6 @@
     return 0;
   }
 
-  // Compensate device-frame beta/gamma for current screen rotation so
-  // "lean" and "pitch" stay meaningful whether the phone is mounted
-  // portrait or landscape.
   function compensateOrientation(beta, gamma, angle){
     switch (((angle % 360) + 360) % 360) {
       case 90:  return { pitch: gamma,  roll: -beta };
@@ -370,7 +354,6 @@
       default:  return { pitch: beta,   roll: gamma };
     }
   }
-  // Same idea for the in-plane (x,y) linear acceleration components.
   function compensateAccelXY(x, y, angle){
     switch (((angle % 360) + 360) % 360) {
       case 90:  return { x: -y, y: x };
@@ -398,6 +381,11 @@
   let subAccel = 100, subLean = 100, subComfort = 100;
   const SCORE_ALPHA = 0.03;
   let lastGammaForRate = null, lastGammaTime = null;
+
+  // --- mini map state ---
+  let mapOrigin = null;      // {lat, lon} of first fix
+  let trackPoints = [];      // [{x, y}] meters, local flat projection, y flipped so north = up
+  let totalDistanceM = 0;
 
   function setStatus(live, label){
     statusDot.classList.toggle('live', live);
@@ -453,8 +441,6 @@
 
     const angle = getScreenAngle();
     const comp = compensateAccelXY(lx, ly, angle);
-    // screen-space: comp.y = "up the screen" axis (forward/brake when mounted
-    // with the top of the UI pointing forward), comp.x = "across the screen" (lateral/lean)
     linear.x = comp.x; linear.y = comp.y; linear.z = lz;
 
     const fwdG = linear.y / 9.81;
@@ -499,11 +485,65 @@
     barComfort.style.width = clamp(c,0,100) + '%'; valComfort.textContent = c.toFixed(0);
   }
 
+  // flat local projection (fine for a single ride's scale) + north-up
+  function llToXY(lat, lon){
+    const dLon = (lon - mapOrigin.lon) * Math.cos(mapOrigin.lat * Math.PI / 180) * 111320;
+    const dLat = (lat - mapOrigin.lat) * 110540;
+    return { x: dLon, y: -dLat }; // flip so increasing latitude (north) moves up
+  }
+
+  function renderMap(){
+    if (trackPoints.length === 0) return;
+    mapEmpty.style.display = 'none';
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of trackPoints) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }
+    const spanRaw = Math.max(maxX - minX, maxY - minY, 12); // min 12m span so it doesn't over-zoom when stationary
+    const pad = spanRaw * 0.18;
+    const span = spanRaw + pad * 2;
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const vx = cx - span / 2, vy = cy - span / 2;
+    mapSvg.setAttribute('viewBox', `${vx} ${vy} ${span} ${span}`);
+
+    const pts = trackPoints.map(p => `${p.x},${p.y}`).join(' ');
+    mapTrack.setAttribute('points', pts);
+
+    const r = clamp(span * 0.022, 1.2, 6);
+
+    const start = trackPoints[0];
+    mapStart.setAttribute('cx', start.x); mapStart.setAttribute('cy', start.y);
+    mapStart.setAttribute('r', r * 0.8);
+    mapStart.style.display = 'block';
+
+    const last = trackPoints[trackPoints.length - 1];
+    mapPos.setAttribute('cx', last.x); mapPos.setAttribute('cy', last.y);
+    mapPos.setAttribute('r', r);
+    mapPos.style.display = 'block';
+  }
+
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
     currentSpeed = kmh;
     speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="tile-unit">km/h</span>';
     lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
+
+    if (!mapOrigin) mapOrigin = { lat: lastLat, lon: lastLon };
+    const xy = llToXY(lastLat, lastLon);
+    const prev = trackPoints.length ? trackPoints[trackPoints.length - 1] : null;
+    if (prev) {
+      const d = Math.hypot(xy.x - prev.x, xy.y - prev.y);
+      if (d > 0.5) { // ignore GPS jitter under half a meter
+        totalDistanceM += d;
+        trackPoints.push(xy);
+      }
+    } else {
+      trackPoints.push(xy);
+    }
+    distVal.textContent = (totalDistanceM / 1000).toFixed(1);
+    renderMap();
 
     if (recording) {
       const t = window.__latestTelemetry || {};
@@ -563,6 +603,11 @@
     maxLean = 0; maxBrakeG = 0; maxAccelG = 0;
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
+    mapOrigin = null; trackPoints = []; totalDistanceM = 0;
+    mapTrack.setAttribute('points', '');
+    mapStart.style.display = 'none'; mapPos.style.display = 'none';
+    mapEmpty.style.display = 'flex';
+    distVal.textContent = '0.0';
     pointsVal.textContent = '0';
     brakeVal.innerHTML = '--<span class="tile-unit">g</span>';
     setStatus(true, 'REGISTRA');
