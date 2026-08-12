@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Telemetria Moto — Prova</title>
+<style>
+  :root{
+    --asphalt: #0A0C0F;
+    --panel: #14171C;
+    --panel-edge: #23272E;
+    --cyan: #00E5D4;
+    --amber: #FF8A1E;
+    --red: #FF4436;
+    --green: #4CD97B;
+    --text: #E9EDF1;
+    --muted: #6B7480;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+    --disp: 'Bebas Neue', 'Oswald', sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin:0; padding:0; height:100%;
+    background: var(--asphalt);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+  body {
+    display:flex; flex-direction:column;
+    min-height:100vh;
+    padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    overflow: hidden;
+  }
+
+  /* --- rotate hint (shown only in portrait) --- */
+  .rotate-hint { display:none; }
+  @media (orientation: portrait) {
+    .rotate-hint {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:14px; height:100vh; text-align:center; padding: 0 30px;
+    }
+    .rotate-hint svg { width:64px; height:64px; opacity:.6; animation: rotatePulse 1.8s ease-in-out infinite; }
+    .rotate-hint p { font-family: var(--mono); font-size:13px; color: var(--muted); max-width:260px; line-height:1.5; margin:0; }
+    .app { display:none; }
+  }
+  @keyframes rotatePulse { 0%,100%{ transform:rotate(0deg); } 50%{ transform:rotate(90deg); } }
+
+  .app { display:flex; flex-direction:column; height:100vh; }
+
+  .topbar {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom: 6px; flex: 0 0 auto;
+  }
+  .brand {
+    font-family: var(--disp);
+    font-size: 18px;
+    letter-spacing: 1.5px;
+    color: var(--text);
+  }
+  .brand span { color: var(--cyan); }
+  .status-dot {
+    width:8px; height:8px; border-radius:50%;
+    background: var(--muted);
+    transition: all .3s;
+  }
+  .status-dot.live {
+    background: var(--red);
+    box-shadow: 0 0 10px 2px rgba(255,68,54,.6);
+    animation: pulse 1.4s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+  .status-row { display:flex; align-items:center; gap:7px; font-family: var(--mono); font-size:11px; color: var(--muted); }
+
+  .perm-note {
+    font-size: 10.5px; color: var(--muted); line-height:1.4;
+    background: var(--panel); border:1px solid var(--panel-edge);
+    border-radius: 8px; padding: 6px 10px; margin-bottom: 6px;
+    flex: 0 0 auto;
+  }
+  .perm-note b { color: var(--text); }
+
+  .layout {
+    display:flex; flex-direction:row; gap:12px;
+    flex: 1 1 auto; min-height:0;
+  }
+
+  .col-horizon {
+    flex: 0 0 auto;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px;
+  }
+  .horizon-wrap {
+    position:relative;
+    width: min(32vw, 78vh, 260px);
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    overflow:hidden;
+    box-shadow: inset 0 0 40px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02);
+  }
+  .horizon-wrap svg { display:block; width:100%; height:100%; }
+  .lean-readout {
+    position:absolute; top:50%; left:50%;
+    transform: translate(-50%,-50%);
+    text-align:center; pointer-events:none; z-index:5;
+  }
+  .lean-num {
+    font-family: var(--mono); font-weight:700;
+    font-size: 44px; line-height:1;
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,229,212,.35);
+    transition: color .2s;
+  }
+  .lean-num.warn { color: var(--amber); text-shadow: 0 0 20px rgba(255,138,30,.4); }
+  .lean-num.danger { color: var(--red); text-shadow: 0 0 20px rgba(255,68,54,.5); }
+  .lean-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; color: var(--muted); margin-top: 2px; }
+
+  .attitude-sub {
+    display:flex; justify-content:center; gap:16px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .attitude-sub b { color: var(--text); font-size: 13px; }
+
+  .col-mid {
+    flex: 1 1 auto; min-width:0;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .grid {
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:8px;
+  }
+  .tile {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 9px;
+    padding: 8px 11px;
+    position:relative;
+  }
+  .tile-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; }
+  .tile-val { font-family: var(--mono); font-size: 20px; font-weight: 600; margin-top: 2px; color: var(--text); }
+  .tile-unit { font-size: 11px; color: var(--muted); margin-left: 3px; }
+  .tile-flag {
+    position:absolute; top:8px; right:9px;
+    font-family: var(--mono); font-size: 8.5px; letter-spacing:.5px;
+    padding: 2px 5px; border-radius: 5px;
+    background: rgba(255,68,54,.15); color: var(--red);
+    opacity:0; transition: opacity .2s;
+  }
+  .tile-flag.show { opacity:1; }
+
+  .col-side {
+    flex: 0 0 220px;
+    display:flex; flex-direction:column; justify-content:center; gap:8px;
+    min-width:0;
+  }
+  .score-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    padding: 10px 13px 12px;
+  }
+  .score-top { display:flex; align-items:baseline; justify-content:space-between; }
+  .score-title { font-family: var(--mono); font-size: 9.5px; letter-spacing: 1.3px; color: var(--muted); text-transform:uppercase; }
+  .score-num { font-family: var(--mono); font-weight:700; font-size: 28px; color: var(--green); }
+  .score-num.mid { color: var(--amber); }
+  .score-num.low { color: var(--red); }
+  .subscores { margin-top: 7px; display:flex; flex-direction:column; gap:5px; }
+  .subrow { display:grid; grid-template-columns: 78px 1fr 24px; align-items:center; gap:6px; }
+  .subrow-label { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .subbar-track { height:4px; border-radius:3px; background:#20242A; overflow:hidden; }
+  .subbar-fill { height:100%; border-radius:3px; background: var(--cyan); transition: width .3s; }
+  .subrow-val { font-family: var(--mono); font-size: 10px; color: var(--text); text-align:right; }
+
+  .actions { display:flex; flex-direction:row; gap:8px; }
+  .btn {
+    appearance:none; border:none; border-radius: 10px;
+    padding: 11px; font-family: var(--disp); font-size: 15px; letter-spacing: .8px;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    cursor:pointer; transition: transform .1s, opacity .2s;
+    flex: 1 1 auto;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-start { background: linear-gradient(135deg, var(--cyan), #00A99D); color: #06110F; }
+  .btn-stop { background: linear-gradient(135deg, var(--red), #B8221A); color: #1A0303; }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--panel-edge); color: var(--muted);
+    font-family: 'Inter', sans-serif; font-weight:500; font-size:12px; padding: 10px;
+  }
+  .btn-ghost:disabled { opacity:.4; }
+  .btn[disabled] { opacity:.5; pointer-events:none; }
+
+  .log-info { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align:center; }
+</style>
+</head>
+<body>
+
+  <div class="rotate-hint">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#00E5D4" stroke-width="1.5">
+      <rect x="5" y="2" width="14" height="20" rx="2"/>
+      <line x1="12" y1="18" x2="12" y2="18.01"/>
+    </svg>
+    <p>Ruota il telefono in orizzontale — l'app è ottimizzata solo per landscape. Controlla anche che il blocco rotazione (Centro di Controllo) sia disattivato.</p>
+  </div>
+
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">TELEMETRIA<span>.MOTO</span></div>
+      <div class="status-row">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">FERMO</span>
+      </div>
+    </div>
+
+    <div class="perm-note" id="permNote">
+      Supporto fisso, schermo acceso. Concedi i permessi <b>movimento/orientamento</b> e <b>posizione</b>. Smorzamento = indice stimato dalle vibrazioni, non misura di laboratorio.
+    </div>
+
+    <div class="layout">
+      <div class="col-horizon">
+        <div class="horizon-wrap">
+          <svg viewBox="0 0 300 300" id="horizonSvg">
+            <defs>
+              <clipPath id="circleClip"><circle cx="150" cy="150" r="149"/></clipPath>
+            </defs>
+            <g clip-path="url(#circleClip)">
+              <g id="horizonGroup" transform-origin="150 150">
+                <rect x="-150" y="-450" width="600" height="600" fill="#0E2A33"/>
+                <rect x="-150" y="150" width="600" height="450" fill="#1A130A"/>
+                <line x1="-300" y1="150" x2="600" y2="150" stroke="#3A4048" stroke-width="2"/>
+                <line x1="-300" y1="100" x2="600" y2="100" stroke="#2A3038" stroke-width="1"/>
+                <line x1="-300" y1="200" x2="600" y2="200" stroke="#2A3038" stroke-width="1"/>
+              </g>
+            </g>
+            <circle cx="150" cy="150" r="149" fill="none" stroke="#23272E" stroke-width="2"/>
+            <g id="ticks" stroke="#4A515B" stroke-width="1.5"></g>
+            <line x1="110" y1="150" x2="135" y2="150" stroke="#E9EDF1" stroke-width="3"/>
+            <line x1="165" y1="150" x2="190" y2="150" stroke="#E9EDF1" stroke-width="3"/>
+            <circle cx="150" cy="150" r="3" fill="#E9EDF1"/>
+          </svg>
+          <div class="lean-readout">
+            <div class="lean-num" id="leanNum">--</div>
+            <div class="lean-label">GRADI PIEGA</div>
+          </div>
+        </div>
+        <div class="attitude-sub">
+          <div>PIEGA <b id="leanSub">--°</b></div>
+          <div>BECCH. <b id="pitchSub">--°</b></div>
+        </div>
+      </div>
+
+      <div class="col-mid">
+        <div class="grid">
+          <div class="tile">
+            <div class="tile-label">Velocità GPS</div>
+            <div class="tile-val" id="speedVal">--<span class="tile-unit">km/h</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Piega max</div>
+            <div class="tile-val" id="maxLeanVal">--<span class="tile-unit">°</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Accelerazione</div>
+            <div class="tile-val" id="accelFwdVal">--<span class="tile-unit">g</span></div>
+            <div class="tile-flag" id="accelFlag">ACCEL+</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Frenata max</div>
+            <div class="tile-val" id="brakeVal">--<span class="tile-unit">g</span></div>
+            <div class="tile-flag" id="brakeFlag">FRENA!</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Vibrazione/Assetto</div>
+            <div class="tile-val" id="suspVal">--<span class="tile-unit">/100</span></div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Punti registrati</div>
+            <div class="tile-val" id="pointsVal">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-side">
+        <div class="score-card">
+          <div class="score-top">
+            <div class="score-title">Punteggio guida</div>
+            <div class="score-num" id="scoreNum">--</div>
+          </div>
+          <div class="subscores">
+            <div class="subrow">
+              <div class="subrow-label">Frenata/Accel.</div>
+              <div class="subbar-track"><div class="subbar-fill" id="barAccel" style="width:0%"></div></div>
+              <div class="subrow-val" id="valAccel">--</div>
+            </div>
+            <div class="subrow">
+              <div class="subrow-label">Piega pulita</div>
+              <div class="subbar-track"><div class="subbar-fill" id="barLean" style="width:0%"></div></div>
+              <div class="subrow-val" id="valLean">--</div>
+            </div>
+            <div class="subrow">
+              <div class="subrow-label">Compostezza</div>
+              <div class="subbar-track"><div class="subbar-fill" id="barComfort" style="width:0%"></div></div>
+              <div class="subrow-val" id="valComfort">--</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-start" id="mainBtn">Avvia</button>
+          <button class="btn btn-ghost" id="exportBtn" disabled>CSV</button>
+        </div>
+        <div class="log-info" id="logInfo"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const leanNum = $('leanNum'), leanSub = $('leanSub'), pitchSub = $('pitchSub');
+  const speedVal = $('speedVal'), maxLeanVal = $('maxLeanVal');
+  const accelFwdVal = $('accelFwdVal'), accelFlag = $('accelFlag');
+  const brakeVal = $('brakeVal'), brakeFlag = $('brakeFlag');
+  const suspVal = $('suspVal'), pointsVal = $('pointsVal');
+  const mainBtn = $('mainBtn'), exportBtn = $('exportBtn');
+  const statusDot = $('statusDot'), statusText = $('statusText');
+  const logInfo = $('logInfo');
+  const horizonGroup = $('horizonGroup'), ticksG = $('ticks');
+  const permNote = $('permNote');
+  const scoreNum = $('scoreNum');
+  const barAccel = $('barAccel'), valAccel = $('valAccel');
+  const barLean = $('barLean'), valLean = $('valLean');
+  const barComfort = $('barComfort'), valComfort = $('valComfort');
+
+  for (let a = -60; a <= 60; a += 15) {
+    if (a === 0) continue;
+    const rad = (a * Math.PI) / 180;
+    const r1 = 149, r2 = a % 30 === 0 ? 130 : 138;
+    const x1 = 150 + r1 * Math.sin(rad), y1 = 150 - r1 * Math.cos(rad);
+    const x2 = 150 + r2 * Math.sin(rad), y2 = 150 - r2 * Math.cos(rad);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    ticksG.appendChild(line);
+  }
+
+  const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+
+  function getScreenAngle(){
+    if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
+    if (typeof window.orientation === 'number') return window.orientation;
+    return 0;
+  }
+
+  // Compensate device-frame beta/gamma for current screen rotation so
+  // "lean" and "pitch" stay meaningful whether the phone is mounted
+  // portrait or landscape.
+  function compensateOrientation(beta, gamma, angle){
+    switch (((angle % 360) + 360) % 360) {
+      case 90:  return { pitch: gamma,  roll: -beta };
+      case 270: return { pitch: -gamma, roll: beta  };
+      case 180: return { pitch: -beta,  roll: -gamma };
+      default:  return { pitch: beta,   roll: gamma };
+    }
+  }
+  // Same idea for the in-plane (x,y) linear acceleration components.
+  function compensateAccelXY(x, y, angle){
+    switch (((angle % 360) + 360) % 360) {
+      case 90:  return { x: -y, y: x };
+      case 270: return { x: y,  y: -x };
+      case 180: return { x: -x, y: -y };
+      default:  return { x: x,  y: y };
+    }
+  }
+
+  let recording = false;
+  let currentLean = 0, currentPitch = 0;
+  let currentSpeed = null;
+  let maxLean = 0, maxBrakeG = 0, maxAccelG = 0;
+  let watchId = null;
+  let logData = [];
+  let lastLat = null, lastLon = null;
+
+  let gEst = { x: 0, y: 0, z: 9.81 };
+  const G_ALPHA = 0.85;
+  let linear = { x: 0, y: 0, z: 0 };
+
+  let vertBuf = [];
+  const VERT_BUF_LEN = 40;
+
+  let subAccel = 100, subLean = 100, subComfort = 100;
+  const SCORE_ALPHA = 0.03;
+  let lastGammaForRate = null, lastGammaTime = null;
+
+  function setStatus(live, label){
+    statusDot.classList.toggle('live', live);
+    statusText.textContent = label;
+  }
+
+  function updateHorizon(rollDeg, pitchDeg){
+    const pitchPx = clamp(pitchDeg, -45, 45) / 45 * 90;
+    horizonGroup.setAttribute('transform', `rotate(${-rollDeg} 150 150) translate(0 ${pitchPx})`);
+    leanNum.textContent = Math.abs(rollDeg).toFixed(0) + '°';
+    leanNum.classList.remove('warn','danger');
+    const abs = Math.abs(rollDeg);
+    if (abs > 40) leanNum.classList.add('danger');
+    else if (abs > 25) leanNum.classList.add('warn');
+    leanSub.textContent = rollDeg.toFixed(0) + '°';
+    pitchSub.textContent = pitchDeg.toFixed(0) + '°';
+  }
+
+  function handleOrientation(e){
+    if (e.gamma === null) return;
+    const angle = getScreenAngle();
+    const comp = compensateOrientation(e.beta || 0, e.gamma, angle);
+    currentLean = comp.roll;
+    currentPitch = comp.pitch;
+    updateHorizon(currentLean, currentPitch);
+    if (Math.abs(currentLean) > Math.abs(maxLean)) {
+      maxLean = currentLean;
+      maxLeanVal.innerHTML = Math.abs(maxLean).toFixed(0) + '<span class="tile-unit">°</span>';
+    }
+    const now = performance.now();
+    if (lastGammaForRate !== null && lastGammaTime !== null) {
+      const dt = (now - lastGammaTime) / 1000;
+      if (dt > 0.02) {
+        const rate = Math.abs(currentLean - lastGammaForRate) / dt;
+        const target = 100 - clamp(rate * 1.1, 0, 100);
+        subLean += (target - subLean) * SCORE_ALPHA;
+        lastGammaForRate = currentLean; lastGammaTime = now;
+      }
+    } else {
+      lastGammaForRate = currentLean; lastGammaTime = now;
+    }
+  }
+
+  function handleMotion(e){
+    const ag = e.accelerationIncludingGravity;
+    if (!ag || ag.x === null) return;
+    const rx = ag.x || 0, ry = ag.y || 0, rz = ag.z || 0;
+
+    gEst.x = G_ALPHA * gEst.x + (1 - G_ALPHA) * rx;
+    gEst.y = G_ALPHA * gEst.y + (1 - G_ALPHA) * ry;
+    gEst.z = G_ALPHA * gEst.z + (1 - G_ALPHA) * rz;
+    const lx = rx - gEst.x, ly = ry - gEst.y, lz = rz - gEst.z;
+
+    const angle = getScreenAngle();
+    const comp = compensateAccelXY(lx, ly, angle);
+    // screen-space: comp.y = "up the screen" axis (forward/brake when mounted
+    // with the top of the UI pointing forward), comp.x = "across the screen" (lateral/lean)
+    linear.x = comp.x; linear.y = comp.y; linear.z = lz;
+
+    const fwdG = linear.y / 9.81;
+    const latG = linear.x / 9.81;
+    const vertG = linear.z / 9.81;
+
+    accelFwdVal.innerHTML = (fwdG >= 0 ? '+' : '') + fwdG.toFixed(2) + '<span class="tile-unit">g</span>';
+    accelFlag.classList.toggle('show', fwdG > 0.30);
+    brakeFlag.classList.toggle('show', fwdG < -0.30);
+
+    if (fwdG > maxAccelG) maxAccelG = fwdG;
+    if (fwdG < maxBrakeG) {
+      maxBrakeG = fwdG;
+      brakeVal.innerHTML = Math.abs(maxBrakeG).toFixed(2) + '<span class="tile-unit">g</span>';
+    }
+
+    vertBuf.push(vertG);
+    if (vertBuf.length > VERT_BUF_LEN) vertBuf.shift();
+    const rms = Math.sqrt(vertBuf.reduce((s,v)=>s+v*v,0) / vertBuf.length);
+    const comfortIdx = clamp(100 - rms * 260, 0, 100);
+    suspVal.innerHTML = comfortIdx.toFixed(0) + '<span class="tile-unit">/100</span>';
+
+    const accelTarget = 100 - clamp(Math.abs(fwdG) * 140, 0, 100);
+    subAccel += (accelTarget - subAccel) * SCORE_ALPHA;
+    subComfort += (comfortIdx - subComfort) * SCORE_ALPHA;
+
+    const overall = subAccel * 0.40 + subLean * 0.35 + subComfort * 0.25;
+    renderScore(overall, subAccel, subLean, subComfort);
+
+    if (recording) {
+      window.__latestTelemetry = { pitch: currentPitch, fwdG, latG, vertG, comfortIdx, score: overall };
+    }
+  }
+
+  function renderScore(overall, a, l, c){
+    scoreNum.textContent = overall.toFixed(0);
+    scoreNum.classList.remove('mid','low');
+    if (overall < 55) scoreNum.classList.add('low');
+    else if (overall < 78) scoreNum.classList.add('mid');
+    barAccel.style.width = clamp(a,0,100) + '%'; valAccel.textContent = a.toFixed(0);
+    barLean.style.width = clamp(l,0,100) + '%'; valLean.textContent = l.toFixed(0);
+    barComfort.style.width = clamp(c,0,100) + '%'; valComfort.textContent = c.toFixed(0);
+  }
+
+  function handlePosition(pos){
+    const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
+    currentSpeed = kmh;
+    speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="tile-unit">km/h</span>';
+    lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
+
+    if (recording) {
+      const t = window.__latestTelemetry || {};
+      logData.push({
+        t: new Date(pos.timestamp).toISOString(),
+        lat: lastLat, lon: lastLon,
+        speed_kmh: kmh !== null ? +kmh.toFixed(1) : '',
+        lean_deg: +currentLean.toFixed(1),
+        pitch_deg: +(t.pitch ?? currentPitch).toFixed(1),
+        accel_fwd_g: t.fwdG !== undefined ? +t.fwdG.toFixed(3) : '',
+        accel_lat_g: t.latG !== undefined ? +t.latG.toFixed(3) : '',
+        accel_vert_g: t.vertG !== undefined ? +t.vertG.toFixed(3) : '',
+        comfort_idx: t.comfortIdx !== undefined ? +t.comfortIdx.toFixed(0) : '',
+        score: t.score !== undefined ? +t.score.toFixed(0) : ''
+      });
+      pointsVal.textContent = logData.length;
+    }
+  }
+
+  async function requestPermissions(){
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const res = await DeviceOrientationEvent.requestPermission();
+      if (res !== 'granted') throw new Error('Permesso orientamento negato');
+    }
+    if (typeof DeviceMotionEvent !== 'undefined' &&
+        typeof DeviceMotionEvent.requestPermission === 'function') {
+      const res2 = await DeviceMotionEvent.requestPermission();
+      if (res2 !== 'granted') throw new Error('Permesso movimento negato');
+    }
+    return true;
+  }
+
+  async function start(){
+    mainBtn.disabled = true;
+    mainBtn.textContent = '…';
+    try {
+      await requestPermissions();
+    } catch(err) {
+      logInfo.textContent = 'Permesso negato — Impostazioni > Safari.';
+      mainBtn.disabled = false;
+      mainBtn.textContent = 'Riprova';
+      return;
+    }
+
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    window.addEventListener('devicemotion', handleMotion, true);
+
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(handlePosition, (err) => {
+        logInfo.textContent = 'GPS non disponibile: ' + err.message;
+      }, { enableHighAccuracy: true, maximumAge: 500, timeout: 8000 });
+    }
+
+    recording = true;
+    logData = [];
+    maxLean = 0; maxBrakeG = 0; maxAccelG = 0;
+    vertBuf = [];
+    subAccel = 100; subLean = 100; subComfort = 100;
+    pointsVal.textContent = '0';
+    brakeVal.innerHTML = '--<span class="tile-unit">g</span>';
+    setStatus(true, 'REGISTRA');
+    permNote.style.display = 'none';
+
+    mainBtn.textContent = 'Ferma';
+    mainBtn.classList.remove('btn-start');
+    mainBtn.classList.add('btn-stop');
+    mainBtn.disabled = false;
+    exportBtn.disabled = true;
+    logInfo.textContent = '';
+  }
+
+  function stop(){
+    recording = false;
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    setStatus(false, 'FERMO');
+    mainBtn.textContent = 'Avvia';
+    mainBtn.classList.remove('btn-stop');
+    mainBtn.classList.add('btn-start');
+    exportBtn.disabled = logData.length === 0;
+    logInfo.textContent = logData.length + ' punti pronti.';
+  }
+
+  mainBtn.addEventListener('click', () => { if (!recording) start(); else stop(); });
+
+  exportBtn.addEventListener('click', () => {
+    if (logData.length === 0) return;
+    const header = 'timestamp,lat,lon,speed_kmh,lean_deg,pitch_deg,accel_fwd_g,accel_lat_g,accel_vert_g,comfort_idx,score\n';
+    const rows = logData.map(r =>
+      `${r.t},${r.lat},${r.lon},${r.speed_kmh},${r.lean_deg},${r.pitch_deg},${r.accel_fwd_g},${r.accel_lat_g},${r.accel_vert_g},${r.comfort_idx},${r.score}`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `telemetria_moto_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  setStatus(false, 'FERMO');
+})();
+</script>
+</body>
+</html>
