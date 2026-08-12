@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Telemetria Moto — Prova</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
     --map-pct: 60%;
@@ -69,28 +68,11 @@
     border-radius:12px; overflow:hidden; background: var(--panel); border:1px solid var(--panel-edge);
     box-shadow: 0 0 0 1px rgba(46,142,255,.06) inset, 0 0 22px rgba(46,142,255,.08);
   }
-  .col-map.style-normal .map-rotator { filter:none !important; }
-  .col-map.style-normal .map-tint, .col-map.style-normal .map-beam { display:none !important; }
-
-  .map-rotator {
-    position:absolute; top:-25%; left:-25%; width:150%; height:150%;
-    transform: rotate(0deg); transform-origin:center center;
-    transition: transform .25s linear;
-    filter: grayscale(.85) brightness(.55) contrast(1.15);
-  }
-  #leafletMap { width:100%; height:100%; background: var(--panel); }
-  .map-tint { position:absolute; inset:0; background: linear-gradient(rgba(15,35,60,.4), rgba(15,35,60,.4)); mix-blend-mode:multiply; pointer-events:none; }
-
-  .map-beam {
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-100%);
-    width:120px; height:58%; pointer-events:none; z-index:399; mix-blend-mode:screen;
-    background: linear-gradient(to top, rgba(92,200,255,.4), rgba(92,200,255,0) 90%);
-    clip-path: polygon(38% 100%, 62% 100%, 100% 0%, 0% 0%);
-  }
+  #gmap { width:100%; height:100%; background: var(--panel); }
 
   .map-arrow {
-    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    width:0; height:0; z-index:400; pointer-events:none;
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(0deg);
+    width:0; height:0; z-index:400; pointer-events:none; transition: transform .2s linear;
     border-left:11px solid transparent; border-right:11px solid transparent; border-bottom:22px solid var(--amber);
     filter: drop-shadow(0 0 7px rgba(255,154,61,.8));
   }
@@ -98,64 +80,72 @@
 
   .map-badge { position:absolute; top:8px; left:8px; z-index:401; background: rgba(5,10,20,.75); border:1px solid var(--panel-edge); border-radius:7px; padding:4px 8px; font-family: var(--mono); font-size:10px; color: var(--text); box-shadow: 0 0 10px rgba(46,142,255,.15); }
   .map-badge b { color: var(--blue-glow); }
-  .map-attrib { position:absolute; bottom:5px; right:8px; z-index:401; font-family: var(--mono); font-size:8px; color: rgba(231,240,255,.4); }
+  .map-nav-btn {
+    position:absolute; top:8px; right:8px; z-index:401; width:30px; height:30px; border-radius:8px;
+    background: rgba(5,10,20,.75); border:1px solid var(--panel-edge); display:flex; align-items:center; justify-content:center;
+    font-size:15px; cursor:pointer; box-shadow: 0 0 10px rgba(46,142,255,.15);
+  }
+  .map-nav-btn.active { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
   .map-empty { position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center; background: var(--bg); font-family: var(--mono); font-size:11px; color: var(--muted); text-align:center; padding:10px; }
 
-  /* drag handle to resize map */
-  .resize-handle {
-    flex: 0 0 20px; display:flex; align-items:center; justify-content:center;
-    cursor: ew-resize; touch-action:none; position:relative; z-index:5;
-  }
+  .resize-handle { flex: 0 0 20px; display:flex; align-items:center; justify-content:center; cursor:ew-resize; touch-action:none; position:relative; z-index:5; }
   .resize-handle .grip { width:5px; height:44px; border-radius:3px; background: var(--panel-edge); box-shadow: 0 0 8px rgba(46,142,255,.15); transition: background .15s; }
   .resize-handle:active .grip, .resize-handle.dragging .grip { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
 
   /* ============ HUD column (right) ============ */
   .col-hud { flex:1 1 auto; min-width:100px; display:flex; flex-direction:column; gap:5px; min-height:0; }
-  .hud-top { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:5px; overflow:hidden; }
+  .hud-top { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:5px; overflow-y:auto; }
   .hud-bottom { flex:0 0 auto; display:flex; flex-direction:column; gap:7px; }
 
-  /* --- lean gauge with bike silhouette --- */
-  .lean-card { flex:1 1 auto; min-height:0; background: var(--panel); border:1px solid var(--panel-edge); border-radius:10px; padding:4px 6px; display:flex; align-items:center; gap:6px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
-  .lean-svg-wrap { flex:0 0 auto; height:100%; aspect-ratio:1/1; max-width:52%; }
-  .lean-svg-wrap svg { width:100%; height:100%; display:block; }
-  .lean-readout-block { flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; }
-  .lean-num-big { font-family: var(--disp); font-weight:800; font-size: clamp(22px, 5.5vh, 40px); line-height:1; color: var(--blue-glow); text-shadow: 0 0 14px rgba(92,200,255,.6); }
-  .lean-num-big.warn { color: var(--amber); text-shadow: 0 0 14px rgba(255,154,61,.5); }
-  .lean-num-big.danger { color: var(--red); text-shadow: 0 0 14px rgba(255,68,54,.6); }
-  .lean-num-label { font-family: var(--mono); font-size:8px; letter-spacing:1.5px; color: var(--muted); margin-top:1px; }
-  .lean-pitch { font-family: var(--mono); font-size:9px; color: var(--muted); margin-top:4px; }
-  .lean-pitch b { color: var(--text); }
+  /* --- shared gauge card (lean + pitch) --- */
+  .gauge-card { background: var(--panel); border:1px solid var(--panel-edge); border-radius:10px; padding:5px 7px; display:flex; align-items:center; gap:7px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
+  .lean-card { flex: 5 1 0; min-height:110px; }
+  .pitch-card { flex: 3 1 0; min-height:78px; }
+  .gauge-svg-wrap { flex:0 0 auto; height:100%; aspect-ratio:1/1; max-width:50%; }
+  .gauge-svg-wrap svg { width:100%; height:100%; display:block; }
+  .gauge-readout { flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; }
+  .gauge-num { font-family: var(--disp); font-weight:800; line-height:1; color: var(--blue-glow); text-shadow: 0 0 14px rgba(92,200,255,.6); }
+  .lean-card .gauge-num { font-size: clamp(24px, 6vh, 44px); }
+  .pitch-card .gauge-num { font-size: clamp(18px, 4vh, 30px); }
+  .gauge-num.warn { color: var(--amber); text-shadow: 0 0 14px rgba(255,154,61,.5); }
+  .gauge-num.danger { color: var(--red); text-shadow: 0 0 14px rgba(255,68,54,.6); }
+  .gauge-label { font-family: var(--mono); font-size:8px; letter-spacing:1.5px; color: var(--muted); margin-top:1px; }
+  .gauge-max { font-family: var(--mono); font-size:10px; color: var(--blue-dim); margin-top:3px; letter-spacing:.5px; }
+  .gauge-max b { color: var(--blue-glow); font-size:12px; }
 
   /* --- G force meter --- */
-  .gforce-card { flex:0 0 auto; background: var(--panel); border:1px solid var(--panel-edge); border-radius:10px; padding:6px 9px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
-  .gforce-top { display:flex; justify-content:space-between; align-items:baseline; font-family: var(--mono); font-size:8px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
-  .gforce-val { font-family: var(--disp); font-weight:700; font-size:15px; color: var(--text); }
+  .gforce-card { flex:0 0 auto; background: var(--panel); border:1px solid var(--panel-edge); border-radius:10px; padding:7px 10px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
+  .gforce-top { display:flex; justify-content:space-between; align-items:baseline; }
+  .gforce-title { font-family: var(--mono); font-size:8px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
+  .gforce-vals { text-align:right; }
+  .gforce-val { font-family: var(--disp); font-weight:800; font-size:24px; line-height:1; }
   .gforce-val.accel { color: var(--blue-glow); }
   .gforce-val.brake { color: var(--red); }
-  .gforce-bar-track { position:relative; height:9px; border-radius:5px; background:#0F1D30; margin-top:5px; overflow:visible; }
+  .gforce-sub { font-family: var(--mono); font-size:9.5px; color: var(--muted); margin-top:1px; }
+  .gforce-bar-track { position:relative; height:10px; border-radius:5px; background:#0F1D30; margin-top:6px; overflow:visible; }
   .gforce-bar-mid { position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background: var(--panel-edge); }
   .gforce-bar-fill { position:absolute; top:0; bottom:0; border-radius:5px; transition: width .1s linear; }
   .gforce-bar-fill.accel { left:50%; background: linear-gradient(90deg, var(--blue-dim), var(--blue-glow)); }
   .gforce-bar-fill.brake { right:50%; background: linear-gradient(270deg, #B8221A, var(--red)); }
-  .gforce-ghost { position:absolute; top:-3px; width:2.5px; height:15px; border-radius:2px; background: #fff; box-shadow: 0 0 6px rgba(255,255,255,.7); opacity:0; }
+  .gforce-ghost { position:absolute; top:-3px; width:2.5px; height:16px; border-radius:2px; background:#fff; box-shadow: 0 0 6px rgba(255,255,255,.7); opacity:0; }
 
   /* --- compact tiles + score --- */
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; flex:0 0 auto; }
   .tile { background: var(--panel); border:1px solid var(--panel-edge); border-radius:8px; padding:4px 7px; }
   .tile-label { font-family: var(--mono); font-size:7px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
-  .tile-val { font-family: var(--mono); font-size:13px; font-weight:600; color: var(--text); }
+  .tile-val { font-family: var(--mono); font-size:14px; font-weight:600; color: var(--text); }
   .tile-unit { font-size:8.5px; color: var(--muted); margin-left:2px; }
 
   .score-card { flex:0 0 auto; background: var(--panel); border:1px solid var(--panel-edge); border-radius:9px; padding:5px 9px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
   .score-top { display:flex; align-items:baseline; justify-content:space-between; }
   .score-title { font-family: var(--mono); font-size:7.5px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
-  .score-num { font-family: var(--disp); font-weight:700; font-size:18px; color: var(--green); }
+  .score-num { font-family: var(--disp); font-weight:700; font-size:16px; color: var(--green); }
   .score-num.mid { color: var(--amber); }
   .score-num.low { color: var(--red); }
-  .subrow-compact { display:flex; justify-content:space-between; font-family: var(--mono); font-size:8px; color: var(--muted); margin-top:2px; }
+  .subrow-compact { display:flex; justify-content:space-between; font-family: var(--mono); font-size:7.5px; color: var(--muted); margin-top:2px; }
   .subrow-compact b { color: var(--text); }
 
-  /* ============ big blind-tappable controls (bottom-right, behind dash) ============ */
+  /* ============ big blind-tappable controls ============ */
   .btn-big {
     appearance:none; border:none; border-radius:12px; padding:14px; font-family: var(--disp); font-weight:700; font-size:16px; letter-spacing:1px;
     display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; min-height:56px;
@@ -168,30 +158,21 @@
   .btn-big[disabled] { opacity:.5; pointer-events:none; }
 
   .mini-actions-row { display:flex; gap:7px; }
-  .btn-mini {
-    appearance:none; border:1px solid var(--panel-edge); background: var(--panel); color: var(--muted);
-    border-radius:9px; padding:8px; font-family:'Inter',sans-serif; font-weight:500; font-size:10.5px;
-    display:flex; align-items:center; justify-content:center; gap:4px; flex:1 1 0; cursor:pointer; min-height:38px;
-  }
+  .btn-mini { appearance:none; border:1px solid var(--panel-edge); background: var(--panel); color: var(--muted); border-radius:9px; padding:8px; font-family:'Inter',sans-serif; font-weight:500; font-size:10.5px; display:flex; align-items:center; justify-content:center; gap:4px; flex:1 1 0; cursor:pointer; min-height:38px; }
   .btn-mini:disabled { opacity:.4; }
-  .btn-mini svg { width:14px; height:14px; }
 
   .log-info { font-family: var(--mono); font-size:8.5px; color: var(--muted); text-align:center; min-height:10px; }
 
-  /* ============ settings popover ============ */
-  .settings-backdrop { position:fixed; inset:0; background: rgba(0,0,0,.55); z-index:900; display:none; }
-  .settings-backdrop.open { display:block; }
-  .settings-panel {
-    position:fixed; bottom:12px; right:12px; left:12px; z-index:901;
-    background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:14px;
-    box-shadow: 0 0 30px rgba(46,142,255,.25);
-    display:none;
-  }
-  .settings-panel.open { display:block; }
-  .settings-title { font-family: var(--disp); font-size:13px; letter-spacing:1px; color: var(--blue-glow); margin-bottom:10px; }
+  /* ============ popovers (settings + nav) ============ */
+  .popover-backdrop { position:fixed; inset:0; background: rgba(0,0,0,.55); z-index:900; display:none; }
+  .popover-backdrop.open { display:block; }
+  .popover-panel { position:fixed; bottom:12px; right:12px; left:12px; z-index:901; background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:14px; box-shadow: 0 0 30px rgba(46,142,255,.25); display:none; }
+  .popover-panel.open { display:block; }
+  .popover-title { font-family: var(--disp); font-size:13px; letter-spacing:1px; color: var(--blue-glow); margin-bottom:10px; }
   .settings-row { display:flex; justify-content:space-between; align-items:center; font-family: var(--mono); font-size:11px; color: var(--text); padding:8px 0; border-top:1px solid var(--panel-edge); }
   .settings-row:first-of-type { border-top:none; }
   .settings-toggle { appearance:none; border:1px solid var(--blue-dim); background:transparent; color: var(--blue-glow); font-family: var(--mono); font-size:10.5px; padding:6px 12px; border-radius:7px; }
+  .settings-input { width:100%; background:#0F1D30; border:1px solid var(--panel-edge); border-radius:8px; padding:11px; color:var(--text); font-family:var(--mono); font-size:13px; margin-bottom:10px; }
 </style>
 </head>
 <body>
@@ -206,16 +187,15 @@
       <div class="brand">TELEMETRIA<span>.MOTO</span></div>
       <div class="status-row"><div class="status-dot" id="statusDot"></div><span id="statusText">FERMO</span></div>
     </div>
-    <div class="perm-note" id="permNote">Supporto fisso. La mappa richiede dati. <b>Calibra</b> a moto ferma prima di partire.</div>
+    <div class="perm-note" id="permNote">Supporto fisso. <b>Calibra</b> a moto ferma prima di partire.</div>
 
     <div class="layout">
 
       <div class="col-map" id="colMap">
-        <div class="map-rotator"><div id="leafletMap"></div><div class="map-tint"></div></div>
-        <div class="map-beam"></div>
-        <div class="map-arrow"></div>
+        <div id="gmap"></div>
+        <div class="map-arrow" id="mapArrow"></div>
         <div class="map-badge"><b id="distVal">0.0</b> km</div>
-        <div class="map-attrib">© OpenStreetMap</div>
+        <div class="map-nav-btn" id="mapNavBtn">🧭</div>
         <div class="map-empty" id="mapEmpty">In attesa di segnale GPS…</div>
       </div>
 
@@ -223,15 +203,16 @@
 
       <div class="col-hud">
         <div class="hud-top">
-          <div class="lean-card">
-            <div class="lean-svg-wrap">
+
+          <div class="gauge-card lean-card">
+            <div class="gauge-svg-wrap">
               <svg viewBox="0 0 160 160" id="leanSvg">
                 <line x1="10" y1="140" x2="150" y2="140" stroke="#17283F" stroke-width="2"/>
                 <g id="bikeGhost" opacity="0">
-                  <path d="M80,55 C68,70 66,95 72,132 L88,132 C94,95 92,70 80,55 Z" fill="rgba(255,255,255,.28)"/>
-                  <ellipse cx="80" cy="65" rx="20" ry="6" fill="rgba(255,255,255,.28)"/>
-                  <circle cx="80" cy="45" r="11" fill="rgba(255,255,255,.28)"/>
-                  <rect x="74" y="130" width="12" height="10" rx="2" fill="rgba(255,255,255,.28)"/>
+                  <path d="M80,55 C68,70 66,95 72,132 L88,132 C94,95 92,70 80,55 Z" fill="rgba(92,200,255,.32)"/>
+                  <ellipse cx="80" cy="65" rx="20" ry="6" fill="rgba(92,200,255,.32)"/>
+                  <circle cx="80" cy="45" r="11" fill="rgba(92,200,255,.32)"/>
+                  <rect x="74" y="130" width="12" height="10" rx="2" fill="rgba(92,200,255,.32)"/>
                 </g>
                 <g id="bikeLive">
                   <path d="M80,55 C68,70 66,95 72,132 L88,132 C94,95 92,70 80,55 Z" fill="var(--blue-glow)"/>
@@ -241,15 +222,21 @@
                 </g>
               </svg>
             </div>
-            <div class="lean-readout-block">
-              <div class="lean-num-big" id="leanNumBig">--°</div>
-              <div class="lean-num-label">PIEGA</div>
-              <div class="lean-pitch">BECCH. <b id="pitchSub">--°</b></div>
+            <div class="gauge-readout">
+              <div class="gauge-num" id="leanNumBig">--°</div>
+              <div class="gauge-label">PIEGA</div>
+              <div class="gauge-max">MAX <b id="leanMaxVal">--°</b></div>
             </div>
           </div>
 
           <div class="gforce-card">
-            <div class="gforce-top"><span>Accelerazione / Frenata</span><span class="gforce-val" id="gforceVal">0.00g</span></div>
+            <div class="gforce-top">
+              <div class="gforce-title">Accelerazione / Frenata</div>
+              <div class="gforce-vals">
+                <div class="gforce-val" id="gforceVal">0.00g</div>
+                <div class="gforce-sub" id="gforceSubMs">0.0 m/s²</div>
+              </div>
+            </div>
             <div class="gforce-bar-track">
               <div class="gforce-bar-mid"></div>
               <div class="gforce-bar-fill accel" id="gBarAccel" style="width:0%"></div>
@@ -258,11 +245,34 @@
             </div>
           </div>
 
+          <div class="gauge-card pitch-card">
+            <div class="gauge-svg-wrap">
+              <svg viewBox="0 0 160 160" id="pitchSvg">
+                <line x1="10" y1="120" x2="150" y2="120" stroke="#17283F" stroke-width="2"/>
+                <g id="pitchGhost" opacity="0">
+                  <circle cx="40" cy="110" r="13" fill="rgba(92,200,255,.32)"/>
+                  <circle cx="120" cy="110" r="13" fill="rgba(92,200,255,.32)"/>
+                  <path d="M40,100 C50,75 70,68 90,68 C105,68 115,80 120,100 L120,105 L40,105 Z" fill="rgba(92,200,255,.32)"/>
+                  <circle cx="95" cy="58" r="9" fill="rgba(92,200,255,.32)"/>
+                </g>
+                <g id="pitchLive">
+                  <circle cx="40" cy="110" r="13" fill="var(--blue-glow)"/>
+                  <circle cx="120" cy="110" r="13" fill="var(--blue-glow)"/>
+                  <path d="M40,100 C50,75 70,68 90,68 C105,68 115,80 120,100 L120,105 L40,105 Z" fill="var(--blue-glow)"/>
+                  <circle cx="95" cy="58" r="9" fill="var(--blue-glow)"/>
+                </g>
+              </svg>
+            </div>
+            <div class="gauge-readout">
+              <div class="gauge-num" id="pitchNumBig">--°</div>
+              <div class="gauge-label">BECCHEGGIO</div>
+              <div class="gauge-max">MAX <b id="pitchMaxVal">--°</b></div>
+            </div>
+          </div>
+
           <div class="grid">
             <div class="tile"><div class="tile-label">Velocità</div><div class="tile-val" id="speedVal">--<span class="tile-unit">km/h</span></div></div>
-            <div class="tile"><div class="tile-label">Piega max</div><div class="tile-val" id="maxLeanVal">--<span class="tile-unit">°</span></div></div>
-            <div class="tile"><div class="tile-label">Assetto</div><div class="tile-val" id="suspVal">--<span class="tile-unit">/100</span></div></div>
-            <div class="tile"><div class="tile-label">Punti</div><div class="tile-val" id="pointsVal">0</div></div>
+            <div class="tile"><div class="tile-label">Vel. max</div><div class="tile-val" id="maxSpeedVal">--<span class="tile-unit">km/h</span></div></div>
           </div>
 
           <div class="score-card">
@@ -284,32 +294,43 @@
     </div>
   </div>
 
-  <div class="settings-backdrop" id="settingsBackdrop"></div>
-  <div class="settings-panel" id="settingsPanel">
-    <div class="settings-title">IMPOSTAZIONI</div>
-    <div class="settings-row"><span>Stile mappa</span><button class="settings-toggle" id="mapStyleToggle">Ghost</button></div>
+  <div class="popover-backdrop" id="settingsBackdrop"></div>
+  <div class="popover-panel" id="settingsPanel">
+    <div class="popover-title">IMPOSTAZIONI</div>
     <div class="settings-row"><span>Chiudi</span><button class="settings-toggle" id="settingsClose">OK</button></div>
   </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <div class="popover-backdrop" id="navBackdrop"></div>
+  <div class="popover-panel" id="navPanel">
+    <div class="popover-title">NAVIGATORE</div>
+    <input type="text" id="destInput" class="settings-input" placeholder="Indirizzo o luogo di destinazione..." />
+    <div class="mini-actions-row">
+      <button class="btn-mini" id="navGoBtn">Vai</button>
+      <button class="btn-mini" id="navClearBtn">Annulla percorso</button>
+      <button class="btn-mini" id="navCloseBtn">Chiudi</button>
+    </div>
+    <div class="log-info" id="navInfo"></div>
+  </div>
+
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const leanNumBig = $('leanNumBig'), pitchSub = $('pitchSub');
+  const leanNumBig = $('leanNumBig'), leanMaxVal = $('leanMaxVal');
+  const pitchNumBig = $('pitchNumBig'), pitchMaxVal = $('pitchMaxVal');
   const bikeLive = $('bikeLive'), bikeGhost = $('bikeGhost');
-  const speedVal = $('speedVal'), maxLeanVal = $('maxLeanVal');
-  const suspVal = $('suspVal'), pointsVal = $('pointsVal');
-  const gforceVal = $('gforceVal'), gBarAccel = $('gBarAccel'), gBarBrake = $('gBarBrake'), gGhost = $('gGhost');
+  const pitchLive = $('pitchLive'), pitchGhost = $('pitchGhost');
+  const speedVal = $('speedVal'), maxSpeedVal = $('maxSpeedVal');
+  const gforceVal = $('gforceVal'), gforceSubMs = $('gforceSubMs'), gBarAccel = $('gBarAccel'), gBarBrake = $('gBarBrake'), gGhost = $('gGhost');
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
   const permNote = $('permNote');
   const scoreNum = $('scoreNum');
   const valAccel = $('valAccel'), valLean = $('valLean'), valComfort = $('valComfort');
-  const distVal = $('distVal'), mapEmpty = $('mapEmpty');
-  const mapRotator = document.querySelector('.map-rotator');
+  const distVal = $('distVal'), mapEmpty = $('mapEmpty'), mapArrow = $('mapArrow');
   const colMap = $('colMap'), resizeHandle = $('resizeHandle');
-  const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose'), mapStyleToggle = $('mapStyleToggle');
+  const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose');
+  const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
   const root = document.documentElement;
@@ -319,32 +340,11 @@
     let saved = null;
     try { saved = localStorage.getItem('moto_map_pct'); } catch(e){}
     if (saved) root.style.setProperty('--map-pct', saved + '%');
-
     let dragging = false, startX = 0, startPct = parseFloat(saved || 60);
     const layoutEl = document.querySelector('.layout');
-
-    function onDown(e){
-      dragging = true;
-      startX = e.clientX;
-      startPct = parseFloat(getComputedStyle(root).getPropertyValue('--map-pct')) || 60;
-      resizeHandle.classList.add('dragging');
-      resizeHandle.setPointerCapture(e.pointerId);
-    }
-    function onMove(e){
-      if (!dragging) return;
-      const dx = e.clientX - startX;
-      const w = layoutEl.clientWidth || 1;
-      let pct = clamp(startPct + (dx / w * 100), 32, 82);
-      root.style.setProperty('--map-pct', pct.toFixed(1) + '%');
-    }
-    function onUp(){
-      if (!dragging) return;
-      dragging = false;
-      resizeHandle.classList.remove('dragging');
-      const pct = getComputedStyle(root).getPropertyValue('--map-pct');
-      try { localStorage.setItem('moto_map_pct', parseFloat(pct)); } catch(e){}
-      if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 200);
-    }
+    function onDown(e){ dragging = true; startX = e.clientX; startPct = parseFloat(getComputedStyle(root).getPropertyValue('--map-pct')) || 60; resizeHandle.classList.add('dragging'); resizeHandle.setPointerCapture(e.pointerId); }
+    function onMove(e){ if (!dragging) return; const dx = e.clientX - startX; const w = layoutEl.clientWidth || 1; let pct = clamp(startPct + (dx / w * 100), 32, 82); root.style.setProperty('--map-pct', pct.toFixed(1) + '%'); }
+    function onUp(){ if (!dragging) return; dragging = false; resizeHandle.classList.remove('dragging'); const pct = getComputedStyle(root).getPropertyValue('--map-pct'); try { localStorage.setItem('moto_map_pct', parseFloat(pct)); } catch(e){} if (gmap) setTimeout(() => google.maps.event.trigger(gmap, 'resize'), 200); }
     resizeHandle.addEventListener('pointerdown', onDown);
     resizeHandle.addEventListener('pointermove', onMove);
     resizeHandle.addEventListener('pointerup', onUp);
@@ -352,21 +352,43 @@
   })();
 
   /* ---------- settings popover ---------- */
-  function openSettings(){ settingsPanel.classList.add('open'); settingsBackdrop.classList.add('open'); }
-  function closeSettings(){ settingsPanel.classList.remove('open'); settingsBackdrop.classList.remove('open'); }
-  settingsBtn.addEventListener('click', openSettings);
+  settingsBtn.addEventListener('click', () => { settingsPanel.classList.add('open'); settingsBackdrop.classList.add('open'); });
   settingsClose.addEventListener('click', closeSettings);
   settingsBackdrop.addEventListener('click', closeSettings);
-  (function initMapStyle(){
-    let saved = null;
-    try { saved = localStorage.getItem('moto_map_style'); } catch(e){}
-    if (saved === 'normal') { colMap.classList.add('style-normal'); mapStyleToggle.textContent = 'Normale'; }
-    mapStyleToggle.addEventListener('click', () => {
-      const isNormal = colMap.classList.toggle('style-normal');
-      mapStyleToggle.textContent = isNormal ? 'Normale' : 'Ghost';
-      try { localStorage.setItem('moto_map_style', isNormal ? 'normal' : 'ghost'); } catch(e){}
+  function closeSettings(){ settingsPanel.classList.remove('open'); settingsBackdrop.classList.remove('open'); }
+
+  /* ---------- navigator popover ---------- */
+  function openNav(){ navPanel.classList.add('open'); navBackdrop.classList.add('open'); }
+  function closeNav(){ navPanel.classList.remove('open'); navBackdrop.classList.remove('open'); }
+  mapNavBtn.addEventListener('click', openNav);
+  navCloseBtn.addEventListener('click', closeNav);
+  navBackdrop.addEventListener('click', closeNav);
+  navGoBtn.addEventListener('click', () => {
+    const dest = destInput.value.trim();
+    if (!dest) return;
+    if (lastLat === null) { navInfo.textContent = 'Aspetta il segnale GPS.'; return; }
+    if (!window.google || !directionsService) { navInfo.textContent = 'Google Maps non caricato — controlla la API key.'; return; }
+    navInfo.textContent = 'Calcolo percorso…';
+    directionsService.route({
+      origin: { lat: lastLat, lng: lastLon },
+      destination: dest,
+      travelMode: google.maps.TravelMode.DRIVING
+    }, (result, status) => {
+      if (status === 'OK') {
+        directionsRenderer.setDirections(result);
+        mapNavBtn.classList.add('active');
+        navInfo.textContent = 'Percorso impostato ✓';
+        setTimeout(closeNav, 700);
+      } else {
+        navInfo.textContent = 'Destinazione non trovata (' + status + ')';
+      }
     });
-  })();
+  });
+  navClearBtn.addEventListener('click', () => {
+    if (directionsRenderer) directionsRenderer.setDirections({ routes: [] });
+    mapNavBtn.classList.remove('active');
+    navInfo.textContent = 'Percorso annullato.';
+  });
 
   /* ---------- orientation / accel compensation ---------- */
   function getScreenAngle(){
@@ -391,7 +413,7 @@
     }
   }
 
-  /* ---------- generic peak-hold-with-decay ("ghost") helper ---------- */
+  /* generic short-lived peak-hold-with-decay ("ghost"), used only for G-force */
   function makePeakHold(holdMs, fadeMs){
     let peak = 0, sign = 1, peakTime = performance.now();
     return function(value, now){
@@ -405,14 +427,13 @@
       return { peak, sign, opacity };
     };
   }
-  const leanPeak = makePeakHold(1400, 1000);
   const gPeak = makePeakHold(1400, 1000);
 
   let recording = false, sensorsActive = false;
   let currentLean = 0, currentPitch = 0;
   let lastRawRoll = 0, lastRawPitch = 0;
   let leanOffset = 0, pitchOffset = 0;
-  let maxLean = 0;
+  let maxLean = 0, maxPitch = 0, maxSpeedKmh = 0;
   let watchId = null;
   let logData = [];
   let lastLat = null, lastLon = null;
@@ -431,26 +452,33 @@
   let lastGammaForRate = null, lastGammaTime = null;
 
   let totalDistanceM = 0;
-  let leafletMap = null;
+  let gmap = null, directionsService = null, directionsRenderer = null;
 
   function setStatus(live, label){ statusDot.classList.toggle('live', live); statusText.textContent = label; }
 
-  function updateLeanGauge(rollDeg, now){
+  // NOTE: sign flipped here (-rollDeg) to correct the inverted lean direction
+  function updateLeanGauge(rollDeg){
     leanNumBig.textContent = Math.abs(rollDeg).toFixed(0) + '°';
     leanNumBig.classList.remove('warn','danger');
     const abs = Math.abs(rollDeg);
     if (abs > 40) leanNumBig.classList.add('danger'); else if (abs > 25) leanNumBig.classList.add('warn');
-    pitchSub.textContent = currentPitch.toFixed(0) + '°';
 
-    bikeLive.setAttribute('transform', `rotate(${rollDeg} 80 140)`);
-    const ph = leanPeak(rollDeg, now);
-    bikeGhost.setAttribute('transform', `rotate(${ph.sign * ph.peak} 80 140)`);
-    bikeGhost.style.opacity = ph.opacity * 0.9;
+    bikeLive.setAttribute('transform', `rotate(${-rollDeg} 80 140)`);
 
-    if (Math.abs(rollDeg) > Math.abs(maxLean)) {
-      maxLean = rollDeg;
-      maxLeanVal.innerHTML = Math.abs(maxLean).toFixed(0) + '<span class="tile-unit">°</span>';
-    }
+    if (Math.abs(rollDeg) > Math.abs(maxLean)) maxLean = rollDeg;
+    leanMaxVal.textContent = Math.abs(maxLean).toFixed(0) + '°';
+    bikeGhost.setAttribute('transform', `rotate(${-maxLean} 80 140)`);
+    bikeGhost.style.opacity = Math.abs(maxLean) > 0.5 ? 0.85 : 0;
+  }
+
+  function updatePitchGauge(pitchDeg){
+    pitchNumBig.textContent = Math.abs(pitchDeg).toFixed(0) + '°';
+    pitchLive.setAttribute('transform', `rotate(${pitchDeg} 80 105)`);
+
+    if (Math.abs(pitchDeg) > Math.abs(maxPitch)) maxPitch = pitchDeg;
+    pitchMaxVal.textContent = Math.abs(maxPitch).toFixed(0) + '°';
+    pitchGhost.setAttribute('transform', `rotate(${maxPitch} 80 105)`);
+    pitchGhost.style.opacity = Math.abs(maxPitch) > 0.5 ? 0.85 : 0;
   }
 
   function handleOrientation(e){
@@ -461,7 +489,8 @@
     lastRawRoll = comp.roll; lastRawPitch = comp.pitch;
     currentLean = comp.roll - leanOffset;
     currentPitch = comp.pitch - pitchOffset;
-    updateLeanGauge(currentLean, performance.now());
+    updateLeanGauge(currentLean);
+    updatePitchGauge(currentPitch);
 
     const now = performance.now();
     if (lastGammaForRate !== null && lastGammaTime !== null) {
@@ -479,6 +508,7 @@
     gforceVal.textContent = (fwdG >= 0 ? '+' : '') + fwdG.toFixed(2) + 'g';
     gforceVal.classList.remove('accel','brake');
     gforceVal.classList.add(fwdG >= 0 ? 'accel' : 'brake');
+    gforceSubMs.textContent = (fwdG * 9.80665 >= 0 ? '+' : '') + (fwdG * 9.80665).toFixed(2) + ' m/s²';
 
     const pct = clamp(Math.abs(fwdG) / 1.0 * 50, 0, 50);
     if (fwdG >= 0) { gBarAccel.style.width = pct + '%'; gBarBrake.style.width = '0%'; }
@@ -512,7 +542,6 @@
     if (vertBuf.length > VERT_BUF_LEN) vertBuf.shift();
     const rms = Math.sqrt(vertBuf.reduce((s,v)=>s+v*v,0) / vertBuf.length);
     const comfortIdx = clamp(100 - rms * 260, 0, 100);
-    suspVal.innerHTML = comfortIdx.toFixed(0) + '<span class="tile-unit">/100</span>';
 
     const accelTarget = 100 - clamp(Math.abs(fwdG) * 140, 0, 100);
     subAccel += (accelTarget - subAccel) * SCORE_ALPHA;
@@ -538,30 +567,49 @@
     return 17;
   }
 
+  // dark "ghost" map style — muted roads/labels, bright accents left to the route line
+  const NIGHT_STYLE = [
+    { elementType: "geometry", stylers: [{ color: "#0A1526" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#5C7699" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#050A14" }] },
+    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#17283F" }] },
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#17283F" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#0A1526" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#1C3050" }] },
+    { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#0A1526" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#08111E" }] }
+  ];
+
   function ensureMap(lat, lon){
-    if (leafletMap) return;
+    if (gmap || !window.google) return;
     mapEmpty.style.display = 'none';
-    leafletMap = L.map('leafletMap', {
-      zoomControl:false, attributionControl:false, dragging:false,
-      scrollWheelZoom:false, doubleClickZoom:false, boxZoom:false,
-      keyboard:false, tap:false, touchZoom:false, inertia:false
-    }).setView([lat, lon], 17);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, subdomains:['a','b','c'] }).addTo(leafletMap);
-    setTimeout(() => leafletMap.invalidateSize(), 150);
+    gmap = new google.maps.Map(document.getElementById('gmap'), {
+      center: { lat, lng: lon }, zoom: 17, styles: NIGHT_STYLE,
+      disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false
+    });
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+      map: gmap, suppressMarkers: true, preserveViewport: true,
+      polylineOptions: { strokeColor: '#5CC8FF', strokeOpacity: 0.95, strokeWeight: 6 }
+    });
   }
 
   function updateMap(lat, lon, kmh, heading){
-    if (!leafletMap) { ensureMap(lat, lon); return; }
-    leafletMap.setView([lat, lon], zoomForSpeed(kmh), { animate:false });
+    if (!gmap) { ensureMap(lat, lon); return; }
+    gmap.setCenter({ lat, lng: lon });
+    gmap.setZoom(zoomForSpeed(kmh));
     if (heading !== null && heading !== undefined && !isNaN(heading)) {
       lastHeading = heading;
-      mapRotator.style.transform = `rotate(${-heading}deg)`;
+      mapArrow.style.transform = `translate(-50%,-50%) rotate(${heading}deg)`;
     }
   }
 
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
     speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="tile-unit">km/h</span>';
+    if (kmh !== null && kmh > maxSpeedKmh) { maxSpeedKmh = kmh; maxSpeedVal.innerHTML = maxSpeedKmh.toFixed(0) + '<span class="tile-unit">km/h</span>'; }
 
     let heading = null;
     if (pos.coords.heading !== null && pos.coords.heading !== undefined && !isNaN(pos.coords.heading) && (kmh === null || kmh > 5)) heading = pos.coords.heading;
@@ -592,7 +640,6 @@
         comfort_idx: t.comfortIdx !== undefined ? +t.comfortIdx.toFixed(0) : '',
         score: t.score !== undefined ? +t.score.toFixed(0) : ''
       });
-      pointsVal.textContent = logData.length;
     }
   }
 
@@ -643,12 +690,12 @@
 
     recording = true;
     logData = [];
-    maxLean = 0;
+    maxLean = 0; maxPitch = 0; maxSpeedKmh = 0;
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
     totalDistanceM = 0; lastLat = null; lastLon = null;
     distVal.textContent = '0.0';
-    pointsVal.textContent = '0';
+    maxSpeedVal.innerHTML = '--<span class="tile-unit">km/h</span>';
     setStatus(true, 'REGISTRA');
     permNote.style.display = 'none';
 
@@ -683,10 +730,13 @@
     URL.revokeObjectURL(url);
   });
 
-  window.addEventListener('orientationchange', () => { if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 300); });
+  window.addEventListener('orientationchange', () => { if (gmap) setTimeout(() => google.maps.event.trigger(gmap, 'resize'), 300); });
 
   setStatus(false, 'FERMO');
 })();
 </script>
+
+<!-- Sostituisci YOUR_GOOGLE_MAPS_API_KEY con la tua chiave (vedi README) -->
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&v=weekly" defer></script>
 </body>
 </html>
