@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Telemetria Moto — Prova</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
     --asphalt: #0A0C0F;
@@ -34,7 +35,7 @@
   body {
     display:flex; flex-direction:column;
     min-height:100vh;
-    padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     overflow: hidden;
   }
 
@@ -52,133 +53,121 @@
 
   .app { display:flex; flex-direction:column; height:100vh; }
 
-  .topbar {
-    display:flex; justify-content:space-between; align-items:center;
-    margin-bottom: 6px; flex: 0 0 auto;
-  }
-  .brand { font-family: var(--disp); font-size: 18px; letter-spacing: 1.5px; color: var(--text); }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px; flex: 0 0 auto; }
+  .brand { font-family: var(--disp); font-size: 16px; letter-spacing: 1.4px; color: var(--text); }
   .brand span { color: var(--cyan); }
-  .status-dot { width:8px; height:8px; border-radius:50%; background: var(--muted); transition: all .3s; }
+  .status-dot { width:7px; height:7px; border-radius:50%; background: var(--muted); transition: all .3s; }
   .status-dot.live { background: var(--red); box-shadow: 0 0 10px 2px rgba(255,68,54,.6); animation: pulse 1.4s infinite; }
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
-  .status-row { display:flex; align-items:center; gap:7px; font-family: var(--mono); font-size:11px; color: var(--muted); }
+  .status-row { display:flex; align-items:center; gap:6px; font-family: var(--mono); font-size:10px; color: var(--muted); }
 
   .perm-note {
-    font-size: 10px; color: var(--muted); line-height:1.4;
+    font-size: 9px; color: var(--muted); line-height:1.3;
     background: var(--panel); border:1px solid var(--panel-edge);
-    border-radius: 8px; padding: 6px 10px; margin-bottom: 6px;
-    flex: 0 0 auto;
+    border-radius: 7px; padding: 5px 9px; margin-bottom: 5px; flex: 0 0 auto;
   }
   .perm-note b { color: var(--text); }
 
-  .layout {
-    display:flex; flex-direction:row; gap:10px;
-    flex: 1 1 auto; min-height:0;
-  }
+  .layout { display:flex; flex-direction:row; gap:8px; flex: 1 1 auto; min-height:0; }
 
-  /* --- mini map --- */
+  /* --- big forward-facing road map --- */
   .col-map {
-    flex: 0 0 min(20vw, 115px);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:5px; min-width:0;
-  }
-  .map-wrap {
-    position:relative;
-    width:100%;
-    aspect-ratio: 1/1;
-    border-radius: 10px;
-    background: var(--panel);
+    flex: 1 1 auto; min-width:0; position:relative;
+    border-radius: 12px; overflow:hidden; background: var(--panel);
     border: 1px solid var(--panel-edge);
-    overflow:hidden;
   }
-  .map-wrap svg { display:block; width:100%; height:100%; }
-  .map-north {
-    position:absolute; top:4px; left:50%; transform:translateX(-50%);
-    font-family: var(--mono); font-size: 8px; letter-spacing:1px; color: var(--muted);
+  .map-rotator {
+    position:absolute; top:-25%; left:-25%; width:150%; height:150%;
+    transform: rotate(0deg); transform-origin:center center;
+    transition: transform .25s linear;
+  }
+  #leafletMap { width:100%; height:100%; background: var(--panel); }
+  .map-arrow {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:0; height:0; z-index:400; pointer-events:none;
+    border-left: 11px solid transparent; border-right: 11px solid transparent;
+    border-bottom: 22px solid var(--amber);
+    filter: drop-shadow(0 0 6px rgba(255,138,30,.7));
+  }
+  .map-arrow::after {
+    content:''; position:absolute; left:-11px; top:22px;
+    width:22px; height:8px; background: var(--amber); border-radius:0 0 4px 4px;
+    opacity:.85;
+  }
+  .map-badge {
+    position:absolute; top:8px; left:8px; z-index:401;
+    background: rgba(10,12,15,.72); border:1px solid var(--panel-edge);
+    border-radius: 7px; padding: 4px 8px;
+    font-family: var(--mono); font-size: 10px; color: var(--text);
+  }
+  .map-badge b { color: var(--cyan); }
+  .map-attrib {
+    position:absolute; bottom:5px; right:8px; z-index:401;
+    font-family: var(--mono); font-size: 8px; color: rgba(233,237,241,.5);
   }
   .map-empty {
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-family: var(--mono); font-size: 8px; color: var(--muted); text-align:center; padding:8px;
+    position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center;
+    background: var(--asphalt); font-family: var(--mono); font-size: 11px; color: var(--muted); text-align:center; padding:10px;
   }
-  .map-dist { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align:center; }
-  .map-dist b { color: var(--text); }
 
-  .col-horizon {
-    flex: 0 0 auto;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:6px;
-  }
+  /* --- right HUD column --- */
+  .col-hud { flex: 0 0 min(30vw, 224px); min-width:0; display:flex; flex-direction:column; gap:5px; }
+
   .horizon-wrap {
-    position:relative;
-    width: min(26vw, 62vh, 200px);
-    aspect-ratio: 1/1;
-    border-radius: 50%;
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    overflow:hidden;
-    box-shadow: inset 0 0 40px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02);
+    position:relative; width: min(15vw, 92px); aspect-ratio: 1/1; margin: 0 auto;
+    border-radius: 50%; background: var(--panel); border: 1px solid var(--panel-edge); overflow:hidden;
+    box-shadow: inset 0 0 30px rgba(0,0,0,.6);
   }
   .horizon-wrap svg { display:block; width:100%; height:100%; }
   .lean-readout { position:absolute; top:50%; left:50%; transform: translate(-50%,-50%); text-align:center; pointer-events:none; z-index:5; }
-  .lean-num {
-    font-family: var(--mono); font-weight:700; font-size: 38px; line-height:1;
-    color: var(--cyan); text-shadow: 0 0 20px rgba(0,229,212,.35); transition: color .2s;
-  }
-  .lean-num.warn { color: var(--amber); text-shadow: 0 0 20px rgba(255,138,30,.4); }
-  .lean-num.danger { color: var(--red); text-shadow: 0 0 20px rgba(255,68,54,.5); }
-  .lean-label { font-family: var(--mono); font-size: 8.5px; letter-spacing: 1.5px; color: var(--muted); margin-top: 2px; }
+  .lean-num { font-family: var(--mono); font-weight:700; font-size: 18px; line-height:1; color: var(--cyan); transition: color .2s; }
+  .lean-num.warn { color: var(--amber); }
+  .lean-num.danger { color: var(--red); }
+  .attitude-sub { display:flex; justify-content:center; gap:10px; font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top:2px; }
+  .attitude-sub b { color: var(--text); font-size: 10.5px; }
 
-  .attitude-sub { display:flex; justify-content:center; gap:14px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
-  .attitude-sub b { color: var(--text); font-size: 12px; }
-
-  .col-mid { flex: 1 1 auto; min-width:0; display:flex; flex-direction:column; justify-content:center; }
-  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:7px; }
-  .tile { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 9px; padding: 7px 10px; position:relative; }
-  .tile-label { font-family: var(--mono); font-size: 8.5px; letter-spacing: 1.1px; color: var(--muted); text-transform: uppercase; }
-  .tile-val { font-family: var(--mono); font-size: 18px; font-weight: 600; margin-top: 2px; color: var(--text); }
-  .tile-unit { font-size: 10px; color: var(--muted); margin-left: 3px; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:5px; }
+  .tile { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 8px; padding: 5px 8px; position:relative; }
+  .tile-label { font-family: var(--mono); font-size: 7.5px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  .tile-val { font-family: var(--mono); font-size: 15px; font-weight: 600; margin-top: 1px; color: var(--text); }
+  .tile-unit { font-size: 9px; color: var(--muted); margin-left: 2px; }
   .tile-flag {
-    position:absolute; top:7px; right:8px; font-family: var(--mono); font-size: 8px; letter-spacing:.5px;
-    padding: 2px 5px; border-radius: 5px; background: rgba(255,68,54,.15); color: var(--red);
-    opacity:0; transition: opacity .2s;
+    position:absolute; top:5px; right:6px; font-family: var(--mono); font-size: 7px; padding: 1px 4px; border-radius: 4px;
+    background: rgba(255,68,54,.15); color: var(--red); opacity:0; transition: opacity .2s;
   }
   .tile-flag.show { opacity:1; }
 
-  .col-side { flex: 0 0 min(26vw, 200px); display:flex; flex-direction:column; justify-content:center; gap:7px; min-width:0; }
-  .score-card { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 10px; padding: 9px 12px 11px; }
+  .score-card { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 9px; padding: 6px 9px; }
   .score-top { display:flex; align-items:baseline; justify-content:space-between; }
-  .score-title { font-family: var(--mono); font-size: 9px; letter-spacing: 1.2px; color: var(--muted); text-transform:uppercase; }
-  .score-num { font-family: var(--mono); font-weight:700; font-size: 25px; color: var(--green); }
+  .score-title { font-family: var(--mono); font-size: 8px; letter-spacing: 1px; color: var(--muted); text-transform:uppercase; }
+  .score-num { font-family: var(--mono); font-weight:700; font-size: 21px; color: var(--green); }
   .score-num.mid { color: var(--amber); }
   .score-num.low { color: var(--red); }
-  .subscores { margin-top: 6px; display:flex; flex-direction:column; gap:5px; }
-  .subrow { display:grid; grid-template-columns: 70px 1fr 22px; align-items:center; gap:6px; }
-  .subrow-label { font-family: var(--mono); font-size: 8.5px; color: var(--muted); }
-  .subbar-track { height:4px; border-radius:3px; background:#20242A; overflow:hidden; }
-  .subbar-fill { height:100%; border-radius:3px; background: var(--cyan); transition: width .3s; }
-  .subrow-val { font-family: var(--mono); font-size: 9.5px; color: var(--text); text-align:right; }
+  .subrow-compact { display:flex; justify-content:space-between; font-family: var(--mono); font-size: 8.5px; color: var(--muted); margin-top:3px; }
+  .subrow-compact b { color: var(--text); }
 
-  .actions { display:flex; flex-direction:row; gap:7px; }
+  .actions { display:flex; flex-direction:column; gap:5px; }
+  .actions-row { display:flex; gap:5px; }
   .btn {
-    appearance:none; border:none; border-radius: 10px; padding: 10px; font-family: var(--disp); font-size: 14px; letter-spacing: .8px;
-    display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; transition: transform .1s, opacity .2s; flex: 1 1 auto;
+    appearance:none; border:none; border-radius: 9px; padding: 8px; font-family: var(--disp); font-size: 13px; letter-spacing: .6px;
+    display:flex; align-items:center; justify-content:center; gap:5px; cursor:pointer; transition: transform .1s, opacity .2s; flex: 1 1 auto;
   }
-  .btn:active { transform: scale(0.98); }
+  .btn:active { transform: scale(0.97); }
   .btn-start { background: linear-gradient(135deg, var(--cyan), #00A99D); color: #06110F; }
   .btn-stop { background: linear-gradient(135deg, var(--red), #B8221A); color: #1A0303; }
-  .btn-ghost { background: transparent; border: 1px solid var(--panel-edge); color: var(--muted); font-family: 'Inter', sans-serif; font-weight:500; font-size:11px; padding: 9px; }
+  .btn-calib { background: linear-gradient(135deg, var(--amber), #B85E10); color: #1A0F03; font-size:11.5px; }
+  .btn-ghost { background: transparent; border: 1px solid var(--panel-edge); color: var(--muted); font-family: 'Inter', sans-serif; font-weight:500; font-size:10.5px; padding: 8px; }
   .btn-ghost:disabled { opacity:.4; }
   .btn[disabled] { opacity:.5; pointer-events:none; }
 
-  .log-info { font-family: var(--mono); font-size: 9.5px; color: var(--muted); text-align:center; }
+  .log-info { font-family: var(--mono); font-size: 9px; color: var(--muted); text-align:center; min-height:11px; }
 </style>
 </head>
 <body>
 
   <div class="rotate-hint">
     <svg viewBox="0 0 24 24" fill="none" stroke="#00E5D4" stroke-width="1.5">
-      <rect x="5" y="2" width="14" height="20" rx="2"/>
-      <line x1="12" y1="18" x2="12" y2="18.01"/>
+      <rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/>
     </svg>
     <p>Ruota il telefono in orizzontale — l'app è ottimizzata solo per landscape. Controlla anche che il blocco rotazione sia disattivato.</p>
   </div>
@@ -186,32 +175,24 @@
   <div class="app">
     <div class="topbar">
       <div class="brand">TELEMETRIA<span>.MOTO</span></div>
-      <div class="status-row">
-        <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">FERMO</span>
-      </div>
+      <div class="status-row"><div class="status-dot" id="statusDot"></div><span id="statusText">FERMO</span></div>
     </div>
 
     <div class="perm-note" id="permNote">
-      Supporto fisso, schermo acceso. Concedi i permessi <b>movimento/orientamento</b> e <b>posizione</b>. Smorzamento = indice stimato dalle vibrazioni.
+      Supporto fisso, schermo acceso. La mappa richiede connessione dati. Calibra a moto ferma prima di partire.
     </div>
 
     <div class="layout">
 
       <div class="col-map">
-        <div class="map-wrap">
-          <div class="map-north">N</div>
-          <svg viewBox="0 0 200 200" id="mapSvg">
-            <polyline id="mapTrack" points="" fill="none" stroke="#00E5D4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-            <circle id="mapStart" cx="0" cy="0" r="3" fill="#6B7480" stroke="#0A0C0F" stroke-width="1" vector-effect="non-scaling-stroke" style="display:none"/>
-            <circle id="mapPos" cx="0" cy="0" r="4" fill="#FF8A1E" stroke="#0A0C0F" stroke-width="1.2" vector-effect="non-scaling-stroke" style="display:none"/>
-          </svg>
-          <div class="map-empty" id="mapEmpty">In attesa GPS…</div>
-        </div>
-        <div class="map-dist"><b id="distVal">0.0</b> km</div>
+        <div class="map-rotator"><div id="leafletMap"></div></div>
+        <div class="map-arrow"></div>
+        <div class="map-badge" id="mapBadge"><b id="distVal">0.0</b> km</div>
+        <div class="map-attrib">© OpenStreetMap</div>
+        <div class="map-empty" id="mapEmpty">In attesa di segnale GPS…</div>
       </div>
 
-      <div class="col-horizon">
+      <div class="col-hud">
         <div class="horizon-wrap">
           <svg viewBox="0 0 300 300" id="horizonSvg">
             <defs><clipPath id="circleClip"><circle cx="150" cy="150" r="149"/></clipPath></defs>
@@ -220,92 +201,44 @@
                 <rect x="-150" y="-450" width="600" height="600" fill="#0E2A33"/>
                 <rect x="-150" y="150" width="600" height="450" fill="#1A130A"/>
                 <line x1="-300" y1="150" x2="600" y2="150" stroke="#3A4048" stroke-width="2"/>
-                <line x1="-300" y1="100" x2="600" y2="100" stroke="#2A3038" stroke-width="1"/>
-                <line x1="-300" y1="200" x2="600" y2="200" stroke="#2A3038" stroke-width="1"/>
               </g>
             </g>
             <circle cx="150" cy="150" r="149" fill="none" stroke="#23272E" stroke-width="2"/>
-            <g id="ticks" stroke="#4A515B" stroke-width="1.5"></g>
             <line x1="110" y1="150" x2="135" y2="150" stroke="#E9EDF1" stroke-width="3"/>
             <line x1="165" y1="150" x2="190" y2="150" stroke="#E9EDF1" stroke-width="3"/>
             <circle cx="150" cy="150" r="3" fill="#E9EDF1"/>
           </svg>
-          <div class="lean-readout">
-            <div class="lean-num" id="leanNum">--</div>
-            <div class="lean-label">GRADI PIEGA</div>
-          </div>
+          <div class="lean-readout"><div class="lean-num" id="leanNum">--</div></div>
         </div>
-        <div class="attitude-sub">
-          <div>PIEGA <b id="leanSub">--°</b></div>
-          <div>BECCH. <b id="pitchSub">--°</b></div>
-        </div>
-      </div>
+        <div class="attitude-sub"><div>P <b id="leanSub">--°</b></div><div>B <b id="pitchSub">--°</b></div></div>
 
-      <div class="col-mid">
         <div class="grid">
-          <div class="tile">
-            <div class="tile-label">Velocità GPS</div>
-            <div class="tile-val" id="speedVal">--<span class="tile-unit">km/h</span></div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Piega max</div>
-            <div class="tile-val" id="maxLeanVal">--<span class="tile-unit">°</span></div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Accelerazione</div>
-            <div class="tile-val" id="accelFwdVal">--<span class="tile-unit">g</span></div>
-            <div class="tile-flag" id="accelFlag">ACCEL+</div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Frenata max</div>
-            <div class="tile-val" id="brakeVal">--<span class="tile-unit">g</span></div>
-            <div class="tile-flag" id="brakeFlag">FRENA!</div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Vibrazione/Assetto</div>
-            <div class="tile-val" id="suspVal">--<span class="tile-unit">/100</span></div>
-          </div>
-          <div class="tile">
-            <div class="tile-label">Punti registrati</div>
-            <div class="tile-val" id="pointsVal">0</div>
-          </div>
+          <div class="tile"><div class="tile-label">Velocità</div><div class="tile-val" id="speedVal">--<span class="tile-unit">km/h</span></div></div>
+          <div class="tile"><div class="tile-label">Piega max</div><div class="tile-val" id="maxLeanVal">--<span class="tile-unit">°</span></div></div>
+          <div class="tile"><div class="tile-label">Accel.</div><div class="tile-val" id="accelFwdVal">--<span class="tile-unit">g</span></div><div class="tile-flag" id="accelFlag">+</div></div>
+          <div class="tile"><div class="tile-label">Frenata max</div><div class="tile-val" id="brakeVal">--<span class="tile-unit">g</span></div><div class="tile-flag" id="brakeFlag">!</div></div>
+          <div class="tile"><div class="tile-label">Assetto</div><div class="tile-val" id="suspVal">--<span class="tile-unit">/100</span></div></div>
+          <div class="tile"><div class="tile-label">Punti</div><div class="tile-val" id="pointsVal">0</div></div>
         </div>
-      </div>
 
-      <div class="col-side">
         <div class="score-card">
-          <div class="score-top">
-            <div class="score-title">Punteggio guida</div>
-            <div class="score-num" id="scoreNum">--</div>
-          </div>
-          <div class="subscores">
-            <div class="subrow">
-              <div class="subrow-label">Frenata/Accel.</div>
-              <div class="subbar-track"><div class="subbar-fill" id="barAccel" style="width:0%"></div></div>
-              <div class="subrow-val" id="valAccel">--</div>
-            </div>
-            <div class="subrow">
-              <div class="subrow-label">Piega pulita</div>
-              <div class="subbar-track"><div class="subbar-fill" id="barLean" style="width:0%"></div></div>
-              <div class="subrow-val" id="valLean">--</div>
-            </div>
-            <div class="subrow">
-              <div class="subrow-label">Compostezza</div>
-              <div class="subbar-track"><div class="subbar-fill" id="barComfort" style="width:0%"></div></div>
-              <div class="subrow-val" id="valComfort">--</div>
-            </div>
-          </div>
+          <div class="score-top"><div class="score-title">Guida</div><div class="score-num" id="scoreNum">--</div></div>
+          <div class="subrow-compact"><span>Fr/Ac <b id="valAccel">--</b></span><span>Pg <b id="valLean">--</b></span><span>Cp <b id="valComfort">--</b></span></div>
         </div>
 
         <div class="actions">
           <button class="btn btn-start" id="mainBtn">Avvia</button>
-          <button class="btn btn-ghost" id="exportBtn" disabled>CSV</button>
+          <div class="actions-row">
+            <button class="btn btn-calib" id="calibBtn">Calibra</button>
+            <button class="btn btn-ghost" id="exportBtn" disabled>CSV</button>
+          </div>
         </div>
         <div class="log-info" id="logInfo"></div>
       </div>
     </div>
   </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -314,29 +247,15 @@
   const accelFwdVal = $('accelFwdVal'), accelFlag = $('accelFlag');
   const brakeVal = $('brakeVal'), brakeFlag = $('brakeFlag');
   const suspVal = $('suspVal'), pointsVal = $('pointsVal');
-  const mainBtn = $('mainBtn'), exportBtn = $('exportBtn');
+  const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
-  const horizonGroup = $('horizonGroup'), ticksG = $('ticks');
+  const horizonGroup = $('horizonGroup');
   const permNote = $('permNote');
   const scoreNum = $('scoreNum');
-  const barAccel = $('barAccel'), valAccel = $('valAccel');
-  const barLean = $('barLean'), valLean = $('valLean');
-  const barComfort = $('barComfort'), valComfort = $('valComfort');
-  const mapTrack = $('mapTrack'), mapStart = $('mapStart'), mapPos = $('mapPos');
-  const mapSvg = $('mapSvg'), mapEmpty = $('mapEmpty'), distVal = $('distVal');
-
-  for (let a = -60; a <= 60; a += 15) {
-    if (a === 0) continue;
-    const rad = (a * Math.PI) / 180;
-    const r1 = 149, r2 = a % 30 === 0 ? 130 : 138;
-    const x1 = 150 + r1 * Math.sin(rad), y1 = 150 - r1 * Math.cos(rad);
-    const x2 = 150 + r2 * Math.sin(rad), y2 = 150 - r2 * Math.cos(rad);
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-    ticksG.appendChild(line);
-  }
+  const valAccel = $('valAccel'), valLean = $('valLean'), valComfort = $('valComfort');
+  const distVal = $('distVal'), mapEmpty = $('mapEmpty');
+  const mapRotator = document.querySelector('.map-rotator');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
 
@@ -345,7 +264,6 @@
     if (typeof window.orientation === 'number') return window.orientation;
     return 0;
   }
-
   function compensateOrientation(beta, gamma, angle){
     switch (((angle % 360) + 360) % 360) {
       case 90:  return { pitch: gamma,  roll: -beta };
@@ -363,15 +281,18 @@
     }
   }
 
-  let recording = false;
+  let recording = false, sensorsActive = false;
   let currentLean = 0, currentPitch = 0;
-  let currentSpeed = null;
+  let lastRawRoll = 0, lastRawPitch = 0;
+  let leanOffset = 0, pitchOffset = 0;
   let maxLean = 0, maxBrakeG = 0, maxAccelG = 0;
   let watchId = null;
   let logData = [];
   let lastLat = null, lastLon = null;
+  let compassHeading = null, lastHeading = 0;
 
   let gEst = { x: 0, y: 0, z: 9.81 };
+  let lastRawAG = null;
   const G_ALPHA = 0.85;
   let linear = { x: 0, y: 0, z: 0 };
 
@@ -382,34 +303,32 @@
   const SCORE_ALPHA = 0.03;
   let lastGammaForRate = null, lastGammaTime = null;
 
-  // --- mini map state ---
-  let mapOrigin = null;      // {lat, lon} of first fix
-  let trackPoints = [];      // [{x, y}] meters, local flat projection, y flipped so north = up
   let totalDistanceM = 0;
+  let leafletMap = null, tileLayer = null;
 
-  function setStatus(live, label){
-    statusDot.classList.toggle('live', live);
-    statusText.textContent = label;
-  }
+  function setStatus(live, label){ statusDot.classList.toggle('live', live); statusText.textContent = label; }
 
   function updateHorizon(rollDeg, pitchDeg){
-    const pitchPx = clamp(pitchDeg, -45, 45) / 45 * 90;
+    const pitchPx = clamp(pitchDeg, -45, 45) / 45 * 55;
     horizonGroup.setAttribute('transform', `rotate(${-rollDeg} 150 150) translate(0 ${pitchPx})`);
     leanNum.textContent = Math.abs(rollDeg).toFixed(0) + '°';
     leanNum.classList.remove('warn','danger');
     const abs = Math.abs(rollDeg);
-    if (abs > 40) leanNum.classList.add('danger');
-    else if (abs > 25) leanNum.classList.add('warn');
+    if (abs > 40) leanNum.classList.add('danger'); else if (abs > 25) leanNum.classList.add('warn');
     leanSub.textContent = rollDeg.toFixed(0) + '°';
     pitchSub.textContent = pitchDeg.toFixed(0) + '°';
   }
 
   function handleOrientation(e){
     if (e.gamma === null) return;
+    if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) {
+      compassHeading = e.webkitCompassHeading;
+    }
     const angle = getScreenAngle();
     const comp = compensateOrientation(e.beta || 0, e.gamma, angle);
-    currentLean = comp.roll;
-    currentPitch = comp.pitch;
+    lastRawRoll = comp.roll; lastRawPitch = comp.pitch;
+    currentLean = comp.roll - leanOffset;
+    currentPitch = comp.pitch - pitchOffset;
     updateHorizon(currentLean, currentPitch);
     if (Math.abs(currentLean) > Math.abs(maxLean)) {
       maxLean = currentLean;
@@ -424,15 +343,14 @@
         subLean += (target - subLean) * SCORE_ALPHA;
         lastGammaForRate = currentLean; lastGammaTime = now;
       }
-    } else {
-      lastGammaForRate = currentLean; lastGammaTime = now;
-    }
+    } else { lastGammaForRate = currentLean; lastGammaTime = now; }
   }
 
   function handleMotion(e){
     const ag = e.accelerationIncludingGravity;
     if (!ag || ag.x === null) return;
     const rx = ag.x || 0, ry = ag.y || 0, rz = ag.z || 0;
+    lastRawAG = { x: rx, y: ry, z: rz };
 
     gEst.x = G_ALPHA * gEst.x + (1 - G_ALPHA) * rx;
     gEst.y = G_ALPHA * gEst.y + (1 - G_ALPHA) * ry;
@@ -443,19 +361,13 @@
     const comp = compensateAccelXY(lx, ly, angle);
     linear.x = comp.x; linear.y = comp.y; linear.z = lz;
 
-    const fwdG = linear.y / 9.81;
-    const latG = linear.x / 9.81;
-    const vertG = linear.z / 9.81;
+    const fwdG = linear.y / 9.81, latG = linear.x / 9.81, vertG = linear.z / 9.81;
 
     accelFwdVal.innerHTML = (fwdG >= 0 ? '+' : '') + fwdG.toFixed(2) + '<span class="tile-unit">g</span>';
     accelFlag.classList.toggle('show', fwdG > 0.30);
     brakeFlag.classList.toggle('show', fwdG < -0.30);
-
     if (fwdG > maxAccelG) maxAccelG = fwdG;
-    if (fwdG < maxBrakeG) {
-      maxBrakeG = fwdG;
-      brakeVal.innerHTML = Math.abs(maxBrakeG).toFixed(2) + '<span class="tile-unit">g</span>';
-    }
+    if (fwdG < maxBrakeG) { maxBrakeG = fwdG; brakeVal.innerHTML = Math.abs(maxBrakeG).toFixed(2) + '<span class="tile-unit">g</span>'; }
 
     vertBuf.push(vertG);
     if (vertBuf.length > VERT_BUF_LEN) vertBuf.shift();
@@ -466,93 +378,81 @@
     const accelTarget = 100 - clamp(Math.abs(fwdG) * 140, 0, 100);
     subAccel += (accelTarget - subAccel) * SCORE_ALPHA;
     subComfort += (comfortIdx - subComfort) * SCORE_ALPHA;
-
     const overall = subAccel * 0.40 + subLean * 0.35 + subComfort * 0.25;
     renderScore(overall, subAccel, subLean, subComfort);
 
-    if (recording) {
-      window.__latestTelemetry = { pitch: currentPitch, fwdG, latG, vertG, comfortIdx, score: overall };
-    }
+    if (recording) window.__latestTelemetry = { pitch: currentPitch, fwdG, latG, vertG, comfortIdx, score: overall };
   }
 
   function renderScore(overall, a, l, c){
     scoreNum.textContent = overall.toFixed(0);
     scoreNum.classList.remove('mid','low');
-    if (overall < 55) scoreNum.classList.add('low');
-    else if (overall < 78) scoreNum.classList.add('mid');
-    barAccel.style.width = clamp(a,0,100) + '%'; valAccel.textContent = a.toFixed(0);
-    barLean.style.width = clamp(l,0,100) + '%'; valLean.textContent = l.toFixed(0);
-    barComfort.style.width = clamp(c,0,100) + '%'; valComfort.textContent = c.toFixed(0);
+    if (overall < 55) scoreNum.classList.add('low'); else if (overall < 78) scoreNum.classList.add('mid');
+    valAccel.textContent = a.toFixed(0); valLean.textContent = l.toFixed(0); valComfort.textContent = c.toFixed(0);
   }
 
-  // flat local projection (fine for a single ride's scale) + north-up
-  function llToXY(lat, lon){
-    const dLon = (lon - mapOrigin.lon) * Math.cos(mapOrigin.lat * Math.PI / 180) * 111320;
-    const dLat = (lat - mapOrigin.lat) * 110540;
-    return { x: dLon, y: -dLat }; // flip so increasing latitude (north) moves up
+  function zoomForSpeed(kmh){
+    if (kmh == null) return 17;
+    if (kmh > 80) return 14;
+    if (kmh > 50) return 15;
+    if (kmh > 25) return 16;
+    return 17;
   }
 
-  function renderMap(){
-    if (trackPoints.length === 0) return;
+  function ensureMap(lat, lon){
+    if (leafletMap) return;
     mapEmpty.style.display = 'none';
+    leafletMap = L.map('leafletMap', {
+      zoomControl:false, attributionControl:false, dragging:false,
+      scrollWheelZoom:false, doubleClickZoom:false, boxZoom:false,
+      keyboard:false, tap:false, touchZoom:false, inertia:false
+    }).setView([lat, lon], 17);
+    tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, subdomains: ['a','b','c']
+    }).addTo(leafletMap);
+    setTimeout(() => leafletMap.invalidateSize(), 150);
+  }
 
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const p of trackPoints) {
-      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
-      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+  function updateMap(lat, lon, kmh, heading){
+    if (!leafletMap) { ensureMap(lat, lon); return; }
+    leafletMap.setView([lat, lon], zoomForSpeed(kmh), { animate:false });
+    if (heading !== null && heading !== undefined && !isNaN(heading)) {
+      lastHeading = heading;
+      mapRotator.style.transform = `rotate(${-heading}deg)`;
     }
-    const spanRaw = Math.max(maxX - minX, maxY - minY, 12); // min 12m span so it doesn't over-zoom when stationary
-    const pad = spanRaw * 0.18;
-    const span = spanRaw + pad * 2;
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    const vx = cx - span / 2, vy = cy - span / 2;
-    mapSvg.setAttribute('viewBox', `${vx} ${vy} ${span} ${span}`);
-
-    const pts = trackPoints.map(p => `${p.x},${p.y}`).join(' ');
-    mapTrack.setAttribute('points', pts);
-
-    const r = clamp(span * 0.022, 1.2, 6);
-
-    const start = trackPoints[0];
-    mapStart.setAttribute('cx', start.x); mapStart.setAttribute('cy', start.y);
-    mapStart.setAttribute('r', r * 0.8);
-    mapStart.style.display = 'block';
-
-    const last = trackPoints[trackPoints.length - 1];
-    mapPos.setAttribute('cx', last.x); mapPos.setAttribute('cy', last.y);
-    mapPos.setAttribute('r', r);
-    mapPos.style.display = 'block';
   }
 
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
-    currentSpeed = kmh;
     speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="tile-unit">km/h</span>';
-    lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
 
-    if (!mapOrigin) mapOrigin = { lat: lastLat, lon: lastLon };
-    const xy = llToXY(lastLat, lastLon);
-    const prev = trackPoints.length ? trackPoints[trackPoints.length - 1] : null;
-    if (prev) {
-      const d = Math.hypot(xy.x - prev.x, xy.y - prev.y);
-      if (d > 0.5) { // ignore GPS jitter under half a meter
-        totalDistanceM += d;
-        trackPoints.push(xy);
-      }
+    let heading = null;
+    if (pos.coords.heading !== null && pos.coords.heading !== undefined && !isNaN(pos.coords.heading) && (kmh === null || kmh > 5)) {
+      heading = pos.coords.heading;
+    } else if (compassHeading !== null) {
+      heading = compassHeading;
     } else {
-      trackPoints.push(xy);
+      heading = lastHeading;
     }
+
+    if (lastLat !== null && lastLon !== null) {
+      const dLon = (pos.coords.longitude - lastLon) * Math.cos(lastLat * Math.PI / 180) * 111320;
+      const dLat = (pos.coords.latitude - lastLat) * 110540;
+      const d = Math.hypot(dLon, dLat);
+      if (d > 0.5) totalDistanceM += d;
+    }
+    lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
     distVal.textContent = (totalDistanceM / 1000).toFixed(1);
-    renderMap();
+
+    updateMap(lastLat, lastLon, kmh, heading);
 
     if (recording) {
       const t = window.__latestTelemetry || {};
       logData.push({
-        t: new Date(pos.timestamp).toISOString(),
-        lat: lastLat, lon: lastLon,
+        t: new Date(pos.timestamp).toISOString(), lat: lastLat, lon: lastLon,
         speed_kmh: kmh !== null ? +kmh.toFixed(1) : '',
-        lean_deg: +currentLean.toFixed(1),
-        pitch_deg: +(t.pitch ?? currentPitch).toFixed(1),
+        heading_deg: heading !== null ? +heading.toFixed(0) : '',
+        lean_deg: +currentLean.toFixed(1), pitch_deg: +(t.pitch ?? currentPitch).toFixed(1),
         accel_fwd_g: t.fwdG !== undefined ? +t.fwdG.toFixed(3) : '',
         accel_lat_g: t.latG !== undefined ? +t.latG.toFixed(3) : '',
         accel_vert_g: t.vertG !== undefined ? +t.vertG.toFixed(3) : '',
@@ -564,33 +464,43 @@
   }
 
   async function requestPermissions(){
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
       const res = await DeviceOrientationEvent.requestPermission();
       if (res !== 'granted') throw new Error('Permesso orientamento negato');
     }
-    if (typeof DeviceMotionEvent !== 'undefined' &&
-        typeof DeviceMotionEvent.requestPermission === 'function') {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
       const res2 = await DeviceMotionEvent.requestPermission();
       if (res2 !== 'granted') throw new Error('Permesso movimento negato');
     }
     return true;
   }
 
-  async function start(){
-    mainBtn.disabled = true;
-    mainBtn.textContent = '…';
-    try {
-      await requestPermissions();
-    } catch(err) {
-      logInfo.textContent = 'Permesso negato — Impostazioni > Safari.';
-      mainBtn.disabled = false;
-      mainBtn.textContent = 'Riprova';
-      return;
-    }
-
+  async function ensureSensors(){
+    if (sensorsActive) return true;
+    try { await requestPermissions(); }
+    catch (err) { logInfo.textContent = 'Permesso negato — Impostazioni > Safari.'; return false; }
     window.addEventListener('deviceorientation', handleOrientation, true);
     window.addEventListener('devicemotion', handleMotion, true);
+    sensorsActive = true;
+    return true;
+  }
+
+  calibBtn.addEventListener('click', async () => {
+    calibBtn.disabled = true;
+    const ok = await ensureSensors();
+    calibBtn.disabled = false;
+    if (!ok) return;
+    leanOffset = lastRawRoll;
+    pitchOffset = lastRawPitch;
+    if (lastRawAG) { gEst.x = lastRawAG.x; gEst.y = lastRawAG.y; gEst.z = lastRawAG.z; }
+    logInfo.textContent = 'Sensori azzerati ✓';
+    setTimeout(() => { if (!recording) logInfo.textContent = ''; }, 1800);
+  });
+
+  async function start(){
+    mainBtn.disabled = true; mainBtn.textContent = '…';
+    const ok = await ensureSensors();
+    if (!ok) { mainBtn.disabled = false; mainBtn.textContent = 'Riprova'; return; }
 
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(handlePosition, (err) => {
@@ -603,10 +513,7 @@
     maxLean = 0; maxBrakeG = 0; maxAccelG = 0;
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
-    mapOrigin = null; trackPoints = []; totalDistanceM = 0;
-    mapTrack.setAttribute('points', '');
-    mapStart.style.display = 'none'; mapPos.style.display = 'none';
-    mapEmpty.style.display = 'flex';
+    totalDistanceM = 0; lastLat = null; lastLon = null;
     distVal.textContent = '0.0';
     pointsVal.textContent = '0';
     brakeVal.innerHTML = '--<span class="tile-unit">g</span>';
@@ -614,8 +521,7 @@
     permNote.style.display = 'none';
 
     mainBtn.textContent = 'Ferma';
-    mainBtn.classList.remove('btn-start');
-    mainBtn.classList.add('btn-stop');
+    mainBtn.classList.remove('btn-start'); mainBtn.classList.add('btn-stop');
     mainBtn.disabled = false;
     exportBtn.disabled = true;
     logInfo.textContent = '';
@@ -626,8 +532,7 @@
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     setStatus(false, 'FERMO');
     mainBtn.textContent = 'Avvia';
-    mainBtn.classList.remove('btn-stop');
-    mainBtn.classList.add('btn-start');
+    mainBtn.classList.remove('btn-stop'); mainBtn.classList.add('btn-start');
     exportBtn.disabled = logData.length === 0;
     logInfo.textContent = logData.length + ' punti pronti.';
   }
@@ -636,20 +541,19 @@
 
   exportBtn.addEventListener('click', () => {
     if (logData.length === 0) return;
-    const header = 'timestamp,lat,lon,speed_kmh,lean_deg,pitch_deg,accel_fwd_g,accel_lat_g,accel_vert_g,comfort_idx,score\n';
+    const header = 'timestamp,lat,lon,speed_kmh,heading_deg,lean_deg,pitch_deg,accel_fwd_g,accel_lat_g,accel_vert_g,comfort_idx,score\n';
     const rows = logData.map(r =>
-      `${r.t},${r.lat},${r.lon},${r.speed_kmh},${r.lean_deg},${r.pitch_deg},${r.accel_fwd_g},${r.accel_lat_g},${r.accel_vert_g},${r.comfort_idx},${r.score}`
+      `${r.t},${r.lat},${r.lon},${r.speed_kmh},${r.heading_deg},${r.lean_deg},${r.pitch_deg},${r.accel_fwd_g},${r.accel_lat_g},${r.accel_vert_g},${r.comfort_idx},${r.score}`
     ).join('\n');
     const blob = new Blob([header + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `telemetria_moto_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = `telemetria_moto_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
+
+  window.addEventListener('orientationchange', () => { if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 300); });
 
   setStatus(false, 'FERMO');
 })();
