@@ -66,13 +66,13 @@ GitHub Pages, repo **pubblico** (Pages su repo privati richiede piano Team/Enter
 - **Punteggio di guida**: tre sotto-punteggi con media mobile esponenziale (`SCORE_ALPHA = 0.03`): fluidità accelerazione/frenata (40%), pulizia in piega — basata sulla velocità angolare del roll (35%), compostezza/comfort verticale (25%).
 - **Calibrazione**: il bottone "Calibra" cattura gli ultimi valori grezzi (`lastRawRoll`, `lastRawPitch`, `lastRawAG`) e li usa come nuovo zero (`leanOffset`, `pitchOffset`, reset di `gEst`). I sensori restano "sempre attivi" una volta concessi i permessi — non sono legati al ciclo Avvia/Ferma, che controlla solo GPS + logging (vedi `ensureSensors()` vs `start()`/`stop()`).
 
-### Gauge "in stile moto" (piega e beccheggio)
+### Gauge "badge + chevron" (piega e beccheggio)
 
-Entrambi condividono la stessa logica e lo stesso pattern visivo:
-- Una sagoma SVG stilizzata (moto+rider vista da dietro per la piega, vista laterale per il beccheggio) che ruota in tempo reale attorno a un pivot, proporzionalmente all'angolo corrente.
-- Un numero grande (font Orbitron) con il valore assoluto in gradi, colorato blu/ambra/rosso sopra soglia (25°/40° per la piega — soglie arbitrarie, punto di partenza da tarare in base al feedback reale).
-- Un "ghost": sagoma semi-trasparente **persistente per tutta la sessione** che mostra il valore massimo raggiunto (non svanisce — comportamento diverso dal picco della forza G, vedi sotto). Si resetta a ogni **Avvia**.
-- **Nota importante sul verso**: il segno di rotazione della piega è stato corretto una volta (era invertito rispetto alla realtà) cambiando `rotate(${rollDeg}...)` in `rotate(${-rollDeg}...)` in `updateLeanGauge()`. Il beccheggio non è stato ancora validato su strada — se risulta invertito, stessa modifica di una riga in `updatePitchGauge()`.
+Niente più sagoma di moto: ogni gauge è un chevron di verso (▶/◀ per la piega, ▲/▼ per il beccheggio) + numero grande (Orbitron) + sottoetichetta tecnica, monocromatici tranne la piega oltre soglia (ambra 25°/rossa 40° — soglie arbitrarie, non calibrate su dati reali). Il beccheggio non ha soglie colore.
+
+- **Massimi separati per lato/verso**: `maxLeanSx`/`maxLeanDx` per la piega, `maxPitchUp`/`maxPitchDown` per il beccheggio — persistenti per tutta la sessione, si resettano a ogni **Avvia** (`start()`), aggiornati in `updateLeanGauge()`/`updatePitchGauge()`.
+- **Convenzione segno**: positivo = destra (DX) per la piega — già validata su strada — e su (SU) per il beccheggio. Se il beccheggio risulta invertito su strada, inverti il segno in `computePitchFromGravity()` (cambia `Math.atan2(-comp.y, ...)` in `Math.atan2(comp.y, ...)`).
+- **Calcolo beccheggio**: da `computePitchFromGravity()`, basato sul vettore di gravità stimato (`gEst`, calcolato in `handleMotion()`) invece che su `deviceorientation.beta` — `beta` è un angolo di Eulero e soffre di gimbal lock/salti discontinui (es. ~-350°) durante un'inclinazione estrema come un'impennata. Non validato su una vera impennata (nessun modo di testarlo senza un dispositivo reale in marcia).
 
 ### G-force (accelerazione/frenata)
 
@@ -102,7 +102,7 @@ timestamp, lat, lon, speed_kmh, heading_deg, lean_deg, pitch_deg, accel_fwd_g, a
 
 ## Problemi noti / cose da verificare su strada
 
-1. **Verso del beccheggio non validato** — vedi sopra, correzione di una riga se necessario in `updatePitchGauge()`.
+1. **Verso del beccheggio non validato** — vedi sopra, correzione di una riga se necessario in `computePitchFromGravity()`.
 2. **Apertura da webview integrata** — se l'app viene aperta tramite un link condiviso dentro un'app che usa una webview interna (non Safari "vero"), i permessi di sensori/posizione possono essere negati o limitati anche se il sito è servito in HTTPS. Va sempre aperta da Safari come sito a sé stante.
 3. **Soglie del punteggio e dei colori warn/danger** (25°/40° piega, 0.30g accelerazione/frenata, pesi 40/35/25 del punteggio) sono punti di partenza ragionevoli ma arbitrari, non calibrati su dati reali.
 4. **Chiave Google Maps esposta lato client** — inevitabile per un'app client-side pura, ma **deve** avere la restrizione HTTP referrer impostata (vedi Setup), altrimenti chiunque trovi la chiave nel repo pubblico può usarla a proprie spese.
