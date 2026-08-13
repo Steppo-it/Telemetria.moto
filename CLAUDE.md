@@ -14,7 +14,7 @@ Non è un progetto con build system, bundler o package manager: è **un solo fil
 - **Google Maps JavaScript API + Directions API** — mappa e calcolo percorso (richiede una API key dell'utente, vedi sotto).
 - **Geolocation API** (`navigator.geolocation.watchPosition`) — posizione, velocità, direzione (heading).
 - **DeviceOrientationEvent / DeviceMotionEvent** — piega, beccheggio, accelerazione (richiedono permesso esplicito su iOS 13+ via `requestPermission()`, deve partire da un tap diretto dell'utente).
-- **localStorage** — persistenza di due preferenze utente (dimensione mappa, stile mappa). Nota: questo NON è un artifact di Claude.ai, gira su una pagina servita esternamente via GitHub Pages, quindi `localStorage` è pienamente supportato (a differenza degli artifact in claude.ai dove è vietato).
+- **localStorage** — persistenza di due preferenze utente: dimensione della mappa (`moto_map_pct`, aggiornata trascinando `#resizeHandle`) e tema chiaro/scuro (`moto_theme`, `dark`/`light`, impostato dal toggle in Impostazioni e riletto anche prima del rendering, in un piccolo `<script>` in `<head>`, per evitare un flash del tema sbagliato). Nota: questo NON è un artifact di Claude.ai, gira su una pagina servita esternamente via GitHub Pages, quindi `localStorage` è pienamente supportato (a differenza degli artifact in claude.ai dove è vietato).
 - **Font esterni**: Google Fonts (Orbitron per i numeri grandi/display, JetBrains Mono per i dati, Inter per testo secondario).
 - **Hosting**: GitHub Pages (repo pubblico — Pages su repo privati richiede un piano a pagamento).
 
@@ -60,7 +60,8 @@ GitHub Pages, repo **pubblico** (Pages su repo privati richiede piano Team/Enter
 
 ### Sensori e calcolo dati
 
-- **Piega (roll)** e **Beccheggio (pitch)**: letti da `deviceorientation` (`beta`/`gamma`), **compensati per l'orientamento fisico dello schermo** (`screen.orientation.angle`) tramite la funzione `compensateOrientation()` — necessario perché il telefono può essere montato sia verticale che orizzontale e i valori grezzi del sensore non seguono automaticamente la rotazione dell'interfaccia.
+- **Piega (roll)**: letta da `deviceorientation` (`beta`/`gamma`), **compensata per l'orientamento fisico dello schermo** (`screen.orientation.angle`) tramite la funzione `compensateOrientation()` — necessario perché il telefono può essere montato sia verticale che orizzontale e i valori grezzi del sensore non seguono automaticamente la rotazione dell'interfaccia.
+- **Beccheggio (pitch)**: NON più letto da `deviceorientation.beta` (limite noto: gimbal lock/salti discontinui oltre ~90° di inclinazione, vedi sotto). Calcolato invece in `handleMotion()` da `computePitchFromGravity()`, a partire dal vettore di gravità stimato (`gEst`) e compensato per l'orientamento schermo come la piega. `handleOrientation()` (l'handler di `deviceorientation`) si occupa quindi solo di piega/roll.
 - **Accelerazione/frenata**: da `devicemotion.accelerationIncludingGravity`, con **filtro passa-basso per stimare e sottrarre la componente di gravità** (tecnica standard tipo "gravity sensor" software, vedi `gEst` e `G_ALPHA = 0.85` nel codice), poi compensata per orientamento schermo (`compensateAccelXY()`). L'asse Y del dispositivo (dopo compensazione) è trattato come longitudinale (avanti/freno), X come laterale, Z come verticale.
 - **Indice "Assetto"/comfort**: RMS mobile dell'accelerazione verticale su una finestra di 40 campioni, mappato 0–100. **Stima**, non una misura reale di smorzamento sospensioni (richiederebbe un sensore sulla ruota). Calcolato internamente per il punteggio ma non più mostrato come tile a sé (rimosso su richiesta utente).
 - **Punteggio di guida**: tre sotto-punteggi con media mobile esponenziale (`SCORE_ALPHA = 0.03`): fluidità accelerazione/frenata (40%), pulizia in piega — basata sulla velocità angolare del roll (35%), compostezza/comfort verticale (25%).
@@ -76,7 +77,7 @@ Niente più sagoma di moto: ogni gauge è un chevron di verso (▶/◀ per la pi
 
 ### G-force (accelerazione/frenata)
 
-Barra orizzontale centrata sullo zero: si riempie verso destra (blu) in accelerazione, verso sinistra (rosso) in frenata. Mostra il valore sia in **g** che in **m/s²** (conversione diretta `g * 9.80665`). A differenza dei gauge piega/beccheggio, qui il "ghost" (marcatore bianco) è **a scomparsa**: mostra il picco recente per ~2,4 secondi (`makePeakHold(1400, 1000)` — hold 1.4s poi fade 1s) e poi si riarma sul valore corrente. Scelta deliberata: per la forza G è più utile vedere "quanto ho appena frenato" che il massimo dell'intera sessione.
+Barra **verticale** (`.gforce-bar`) con uno sfondo a **gradiente statico fisso** (blu in alto → verde-acqua → grigio neutro al centro/zero → ambra → rosso in basso) — non si riempie né si svuota, il gradiente è sempre tutto visibile. Un solo marcatore a scomparsa (`#gGhost`) si sposta lungo la barra per indicare il picco recente: sopra il centro in accelerazione, sotto in frenata, con offset dal centro proporzionale a `g` (clampato a ±1g = ±50% di corsa). Mostra il valore solo in **g** (`#gforceVal`, es. "+0.42g") — niente più m/s². Come per gli altri gauge il ghost è "a scomparsa": resta pieno per ~1,4s poi sfuma in ~1s (`makePeakHold(1400, 1000)`) prima di riarmarsi sul valore corrente. Scelta deliberata: per la forza G è più utile vedere "quanto ho appena frenato" che il massimo dell'intera sessione.
 
 ### Mappa e navigazione
 
@@ -90,7 +91,7 @@ Barra orizzontale centrata sullo zero: si riempie verso destra (blu) in accelera
 
 - **Landscape only**: se il telefono è in portrait, viene mostrato un overlay "ruota il telefono" (`@media (orientation: portrait)`) invece dell'interfaccia.
 - **Tre zone funzionali**, vincolo derivato da un caso reale: quando il telefono è montato su alcune moto, la porzione **in basso a destra dello schermo risulta fisicamente coperta dal quadro strumenti**. Quella zona (`.hud-bottom`) contiene quindi i controlli più critici — Avvia/Ferma, Calibra — resi **grandi e ben distanziati apposta per essere premuti "alla cieca"**, per tatto, senza bisogno di vederli. "Impostazioni" e "CSV" sono più piccoli e in fondo, perché vengono usati solo a telefono staccato dal supporto.
-- Font monospazio per i dati tecnici, Orbitron per i numeri "hero" (piega, punteggio) — tema "digitale/futuristico" con accenti blu elettrico, griglia di sfondo sottile in stile blueprint, glow leggeri sui bordi.
+- Font monospazio per i dati tecnici, Orbitron per i numeri "hero" (piega, punteggio) — tema "digitale/futuristico", griglia di sfondo sottile in stile blueprint. Sistema di **temi chiaro/scuro** (`:root[data-theme]`, token `--ink`/`--ink-dim`/`--hair`/`--bg`/`--bg2`/`--accent`): **notturno di default**, **diurno attivabile in Impostazioni** (persistito in `localStorage`, vedi sopra). L'interfaccia è **volutamente monocromatica** in entrambi i temi — l'unica UI sempre colorata è la barra G-force (gradiente blu/verde/ambra/rosso fisso); il colore compare altrove solo come segnale di stato: soglie ambra/rossa sulla piega oltre 25°/40° e il puntino di stato rosso lampeggiante durante la registrazione.
 
 ## Formato export CSV
 
