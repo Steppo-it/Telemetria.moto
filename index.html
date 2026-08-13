@@ -119,37 +119,44 @@
   .hud-top { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:5px; overflow-y:auto; }
   .hud-bottom { flex:0 0 auto; display:flex; flex-direction:column; gap:7px; }
 
-  /* --- shared gauge card (lean + pitch) --- */
-  .gauge-card { background: var(--panel); border:1px solid var(--panel-edge); border-radius:10px; padding:5px 7px; display:flex; align-items:center; gap:7px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
-  .lean-card { flex: 5 1 0; min-height:110px; }
-  .pitch-card { flex: 3 1 0; min-height:78px; }
-  .gauge-svg-wrap { flex:0 0 auto; height:100%; aspect-ratio:1/1; max-width:50%; }
-  .gauge-svg-wrap svg { width:100%; height:100%; display:block; }
-  .gauge-readout { flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; }
-  .gauge-num { font-family: var(--disp); font-weight:800; line-height:1; color: var(--blue-glow); text-shadow: 0 0 14px rgba(92,200,255,.6); }
-  .lean-card .gauge-num { font-size: clamp(24px, 6vh, 44px); }
-  .pitch-card .gauge-num { font-size: clamp(18px, 4vh, 30px); }
-  .gauge-num.warn { color: var(--amber); text-shadow: 0 0 14px rgba(255,154,61,.5); }
-  .gauge-num.danger { color: var(--red); text-shadow: 0 0 14px rgba(255,68,54,.6); }
-  .gauge-label { font-family: var(--mono); font-size:8px; letter-spacing:1.5px; color: var(--muted); margin-top:1px; }
-  .gauge-max { font-family: var(--mono); font-size:10px; color: var(--blue-dim); margin-top:3px; letter-spacing:.5px; }
-  .gauge-max b { color: var(--blue-glow); font-size:12px; }
+  /* --- lean + pitch badges + barra G, riga interna a hud-top --- */
+  .gauge-cluster { flex:1 1 auto; min-height:0; display:flex; gap:8px; }
+  .gauges-col { flex:1 1 auto; display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .gauge-badge { display:flex; align-items:center; gap:9px; min-width:0; }
+  .lean-badge { flex: 1.5 1 0; }
+  .pitch-badge { flex: 1 1 0; }
 
-  /* --- G force meter --- */
-  .gforce-card { flex:0 0 auto; background: var(--panel); border:1px solid var(--panel-edge); border-radius:10px; padding:7px 10px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
-  .gforce-top { display:flex; justify-content:space-between; align-items:baseline; }
-  .gforce-title { font-family: var(--mono); font-size:8px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
-  .gforce-vals { text-align:right; }
-  .gforce-val { font-family: var(--disp); font-weight:800; font-size:24px; line-height:1; }
-  .gforce-val.accel { color: var(--blue-glow); }
-  .gforce-val.brake { color: var(--red); }
-  .gforce-sub { font-family: var(--mono); font-size:9.5px; color: var(--muted); margin-top:1px; }
-  .gforce-bar-track { position:relative; height:10px; border-radius:5px; background:#0F1D30; margin-top:6px; overflow:visible; }
-  .gforce-bar-mid { position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background: var(--panel-edge); }
-  .gforce-bar-fill { position:absolute; top:0; bottom:0; border-radius:5px; transition: width .1s linear; }
-  .gforce-bar-fill.accel { left:50%; background: linear-gradient(90deg, var(--blue-dim), var(--blue-glow)); }
-  .gforce-bar-fill.brake { right:50%; background: linear-gradient(270deg, #B8221A, var(--red)); }
-  .gforce-ghost { position:absolute; top:-3px; width:2.5px; height:16px; border-radius:2px; background:#fff; box-shadow: 0 0 6px rgba(255,255,255,.7); opacity:0; }
+  .gauge-chevron {
+    font-family: var(--mono); line-height:1; color: var(--accent);
+    border:1px solid var(--hair); border-radius:6px; padding:5px 9px;
+    transition: color .15s, border-color .15s;
+  }
+  .lean-badge .gauge-chevron { font-size: clamp(20px, 5vh, 28px); }
+  .pitch-badge .gauge-chevron { font-size: clamp(14px, 3.2vh, 18px); }
+  .gauge-chevron.warn { color: var(--amber); border-color: var(--amber); }
+  .gauge-chevron.danger { color: var(--red); border-color: var(--red); }
+
+  .gauge-body { flex:0 0 auto; min-width:0; }
+  .gauge-num { font-family: var(--disp); font-weight:800; line-height:1; color: var(--ink); letter-spacing:.5px; }
+  .lean-badge .gauge-num { font-size: clamp(26px, 6.6vh, 38px); }
+  .pitch-badge .gauge-num { font-size: clamp(16px, 4vh, 22px); }
+  .gauge-num.warn { color: var(--amber); }
+  .gauge-num.danger { color: var(--red); }
+  .gauge-sub { font-family: var(--mono); font-size:7.5px; letter-spacing:1.3px; color: var(--ink-dim); margin-top:1px; }
+
+  .gauge-maxrow { margin-left:auto; text-align:right; font-family: var(--mono); font-size:7.5px; color: var(--ink-dim); line-height:1.6; white-space:nowrap; }
+  .gauge-maxrow b { color: var(--ink); font-weight:600; }
+
+  /* --- G force vertical bar --- */
+  .gforce-bar {
+    width:20px; flex:0 0 auto; align-self:stretch; border-radius:4px; position:relative;
+    background: linear-gradient(180deg, var(--blue) 0%, #6FE0B8 26%, var(--hair) 48%, var(--hair) 52%, var(--amber) 74%, var(--red) 100%);
+  }
+  .gforce-marker {
+    position:absolute; left:-3px; right:-3px; height:4px; top:50%; transform: translateY(-50%);
+    background: var(--ink); border-radius:2px; box-shadow: 0 0 6px rgba(0,0,0,.4); opacity:0; transition: opacity .2s;
+  }
+  .gforce-val { position:absolute; bottom:4px; left:0; right:0; text-align:center; font-family: var(--mono); font-size:7px; font-weight:700; color: var(--ink); }
 
   /* --- compact tiles + score --- */
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; flex:0 0 auto; }
@@ -225,70 +232,28 @@
 
       <div class="col-hud">
         <div class="hud-top">
-
-          <div class="gauge-card lean-card">
-            <div class="gauge-svg-wrap">
-              <svg viewBox="0 0 160 160" id="leanSvg">
-                <line x1="10" y1="140" x2="150" y2="140" stroke="#17283F" stroke-width="2"/>
-                <g id="bikeGhost" opacity="0">
-                  <path d="M80,55 C68,70 66,95 72,132 L88,132 C94,95 92,70 80,55 Z" fill="rgba(92,200,255,.32)"/>
-                  <ellipse cx="80" cy="65" rx="20" ry="6" fill="rgba(92,200,255,.32)"/>
-                  <circle cx="80" cy="45" r="11" fill="rgba(92,200,255,.32)"/>
-                  <rect x="74" y="130" width="12" height="10" rx="2" fill="rgba(92,200,255,.32)"/>
-                </g>
-                <g id="bikeLive">
-                  <path d="M80,55 C68,70 66,95 72,132 L88,132 C94,95 92,70 80,55 Z" fill="var(--blue-glow)"/>
-                  <ellipse cx="80" cy="65" rx="20" ry="6" fill="var(--blue-glow)"/>
-                  <circle cx="80" cy="45" r="11" fill="var(--blue-glow)"/>
-                  <rect x="74" y="130" width="12" height="10" rx="2" fill="var(--blue-glow)"/>
-                </g>
-              </svg>
-            </div>
-            <div class="gauge-readout">
-              <div class="gauge-num" id="leanNumBig">--°</div>
-              <div class="gauge-label">PIEGA</div>
-              <div class="gauge-max">MAX <b id="leanMaxVal">--°</b></div>
-            </div>
-          </div>
-
-          <div class="gforce-card">
-            <div class="gforce-top">
-              <div class="gforce-title">Accelerazione / Frenata</div>
-              <div class="gforce-vals">
-                <div class="gforce-val" id="gforceVal">0.00g</div>
-                <div class="gforce-sub" id="gforceSubMs">0.0 m/s²</div>
+          <div class="gauge-cluster">
+            <div class="gauges-col">
+              <div class="gauge-badge lean-badge">
+                <div class="gauge-chevron" id="leanChevron">–</div>
+                <div class="gauge-body">
+                  <div class="gauge-num" id="leanNumBig">--°</div>
+                  <div class="gauge-sub" id="leanSub">PIEGA</div>
+                </div>
+                <div class="gauge-maxrow">SX <b id="leanMaxSx">--°</b><br>DX <b id="leanMaxDx">--°</b></div>
+              </div>
+              <div class="gauge-badge pitch-badge">
+                <div class="gauge-chevron" id="pitchChevron">–</div>
+                <div class="gauge-body">
+                  <div class="gauge-num" id="pitchNumBig">--°</div>
+                  <div class="gauge-sub" id="pitchSub">BECCHEGGIO</div>
+                </div>
+                <div class="gauge-maxrow">DOWN <b id="pitchMaxDown">--°</b><br>UP <b id="pitchMaxUp">--°</b></div>
               </div>
             </div>
-            <div class="gforce-bar-track">
-              <div class="gforce-bar-mid"></div>
-              <div class="gforce-bar-fill accel" id="gBarAccel" style="width:0%"></div>
-              <div class="gforce-bar-fill brake" id="gBarBrake" style="width:0%"></div>
-              <div class="gforce-ghost" id="gGhost"></div>
-            </div>
-          </div>
-
-          <div class="gauge-card pitch-card">
-            <div class="gauge-svg-wrap">
-              <svg viewBox="0 0 160 160" id="pitchSvg">
-                <line x1="10" y1="120" x2="150" y2="120" stroke="#17283F" stroke-width="2"/>
-                <g id="pitchGhost" opacity="0">
-                  <circle cx="40" cy="110" r="13" fill="rgba(92,200,255,.32)"/>
-                  <circle cx="120" cy="110" r="13" fill="rgba(92,200,255,.32)"/>
-                  <path d="M40,100 C50,75 70,68 90,68 C105,68 115,80 120,100 L120,105 L40,105 Z" fill="rgba(92,200,255,.32)"/>
-                  <circle cx="95" cy="58" r="9" fill="rgba(92,200,255,.32)"/>
-                </g>
-                <g id="pitchLive">
-                  <circle cx="40" cy="110" r="13" fill="var(--blue-glow)"/>
-                  <circle cx="120" cy="110" r="13" fill="var(--blue-glow)"/>
-                  <path d="M40,100 C50,75 70,68 90,68 C105,68 115,80 120,100 L120,105 L40,105 Z" fill="var(--blue-glow)"/>
-                  <circle cx="95" cy="58" r="9" fill="var(--blue-glow)"/>
-                </g>
-              </svg>
-            </div>
-            <div class="gauge-readout">
-              <div class="gauge-num" id="pitchNumBig">--°</div>
-              <div class="gauge-label">BECCHEGGIO</div>
-              <div class="gauge-max">MAX <b id="pitchMaxVal">--°</b></div>
+            <div class="gforce-bar">
+              <div class="gforce-marker" id="gGhost"></div>
+              <div class="gforce-val" id="gforceVal">0.00g</div>
             </div>
           </div>
 
@@ -338,12 +303,12 @@
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const leanNumBig = $('leanNumBig'), leanMaxVal = $('leanMaxVal');
-  const pitchNumBig = $('pitchNumBig'), pitchMaxVal = $('pitchMaxVal');
-  const bikeLive = $('bikeLive'), bikeGhost = $('bikeGhost');
-  const pitchLive = $('pitchLive'), pitchGhost = $('pitchGhost');
+  const leanChevron = $('leanChevron'), leanNumBig = $('leanNumBig'), leanSub = $('leanSub');
+  const leanMaxSxEl = $('leanMaxSx'), leanMaxDxEl = $('leanMaxDx');
+  const pitchChevron = $('pitchChevron'), pitchNumBig = $('pitchNumBig'), pitchSub = $('pitchSub');
+  const pitchMaxUpEl = $('pitchMaxUp'), pitchMaxDownEl = $('pitchMaxDown');
   const speedVal = $('speedVal'), maxSpeedVal = $('maxSpeedVal');
-  const gforceVal = $('gforceVal'), gforceSubMs = $('gforceSubMs'), gBarAccel = $('gBarAccel'), gBarBrake = $('gBarBrake'), gGhost = $('gGhost');
+  const gforceVal = $('gforceVal'), gGhost = $('gGhost');
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
@@ -467,7 +432,7 @@
   let currentLean = 0, currentPitch = 0;
   let lastRawRoll = 0, lastRawPitch = 0;
   let leanOffset = 0, pitchOffset = 0;
-  let maxLean = 0, maxPitch = 0, maxSpeedKmh = 0;
+  let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0, maxSpeedKmh = 0;
   let watchId = null;
   let logData = [];
   let lastLat = null, lastLon = null;
@@ -490,29 +455,35 @@
 
   function setStatus(live, label){ statusDot.classList.toggle('live', live); statusText.textContent = label; }
 
-  // NOTE: sign flipped here (-rollDeg) to correct the inverted lean direction
+  // Positivo = destra (DX) per la piega, su (SU) per il beccheggio — convenzione già
+  // validata su strada per la piega (vedi CLAUDE.md); il beccheggio va confermato.
   function updateLeanGauge(rollDeg){
-    leanNumBig.textContent = Math.abs(rollDeg).toFixed(0) + '°';
-    leanNumBig.classList.remove('warn','danger');
     const abs = Math.abs(rollDeg);
-    if (abs > 40) leanNumBig.classList.add('danger'); else if (abs > 25) leanNumBig.classList.add('warn');
+    leanNumBig.textContent = abs.toFixed(0) + '°';
+    leanChevron.textContent = rollDeg >= 0 ? '▶' : '◀';
+    leanSub.textContent = 'PIEGA · ' + (rollDeg >= 0 ? 'DX' : 'SX');
 
-    bikeLive.setAttribute('transform', `rotate(${-rollDeg} 80 140)`);
+    leanNumBig.classList.remove('warn','danger');
+    leanChevron.classList.remove('warn','danger');
+    if (abs > 40) { leanNumBig.classList.add('danger'); leanChevron.classList.add('danger'); }
+    else if (abs > 25) { leanNumBig.classList.add('warn'); leanChevron.classList.add('warn'); }
 
-    if (Math.abs(rollDeg) > Math.abs(maxLean)) maxLean = rollDeg;
-    leanMaxVal.textContent = Math.abs(maxLean).toFixed(0) + '°';
-    bikeGhost.setAttribute('transform', `rotate(${-maxLean} 80 140)`);
-    bikeGhost.style.opacity = Math.abs(maxLean) > 0.5 ? 0.85 : 0;
+    if (rollDeg >= 0) { if (rollDeg > maxLeanDx) maxLeanDx = rollDeg; }
+    else { if (-rollDeg > maxLeanSx) maxLeanSx = -rollDeg; }
+    leanMaxDxEl.textContent = maxLeanDx.toFixed(0) + '°';
+    leanMaxSxEl.textContent = maxLeanSx.toFixed(0) + '°';
   }
 
   function updatePitchGauge(pitchDeg){
-    pitchNumBig.textContent = Math.abs(pitchDeg).toFixed(0) + '°';
-    pitchLive.setAttribute('transform', `rotate(${pitchDeg} 80 105)`);
+    const abs = Math.abs(pitchDeg);
+    pitchNumBig.textContent = abs.toFixed(0) + '°';
+    pitchChevron.textContent = pitchDeg >= 0 ? '▲' : '▼';
+    pitchSub.textContent = 'BECCH. · ' + (pitchDeg >= 0 ? 'SU' : 'GIÙ');
 
-    if (Math.abs(pitchDeg) > Math.abs(maxPitch)) maxPitch = pitchDeg;
-    pitchMaxVal.textContent = Math.abs(maxPitch).toFixed(0) + '°';
-    pitchGhost.setAttribute('transform', `rotate(${maxPitch} 80 105)`);
-    pitchGhost.style.opacity = Math.abs(maxPitch) > 0.5 ? 0.85 : 0;
+    if (pitchDeg >= 0) { if (pitchDeg > maxPitchUp) maxPitchUp = pitchDeg; }
+    else { if (-pitchDeg > maxPitchDown) maxPitchDown = -pitchDeg; }
+    pitchMaxUpEl.textContent = maxPitchUp.toFixed(0) + '°';
+    pitchMaxDownEl.textContent = maxPitchDown.toFixed(0) + '°';
   }
 
   function handleOrientation(e){
@@ -540,17 +511,10 @@
 
   function updateGforceGauge(fwdG, now){
     gforceVal.textContent = (fwdG >= 0 ? '+' : '') + fwdG.toFixed(2) + 'g';
-    gforceVal.classList.remove('accel','brake');
-    gforceVal.classList.add(fwdG >= 0 ? 'accel' : 'brake');
-    gforceSubMs.textContent = (fwdG * 9.80665 >= 0 ? '+' : '') + (fwdG * 9.80665).toFixed(2) + ' m/s²';
-
-    const pct = clamp(Math.abs(fwdG) / 1.0 * 50, 0, 50);
-    if (fwdG >= 0) { gBarAccel.style.width = pct + '%'; gBarBrake.style.width = '0%'; }
-    else { gBarBrake.style.width = pct + '%'; gBarAccel.style.width = '0%'; }
 
     const gp = gPeak(fwdG, now);
-    const ghostPct = clamp(gp.peak / 1.0 * 50, 0, 50);
-    gGhost.style.left = gp.sign >= 0 ? `calc(50% + ${ghostPct}%)` : `calc(50% - ${ghostPct}%)`;
+    const pct = clamp(gp.peak / 1.0 * 50, 0, 50);
+    gGhost.style.top = (gp.sign >= 0 ? (50 - pct) : (50 + pct)) + '%';
     gGhost.style.opacity = gp.opacity;
   }
 
@@ -724,7 +688,7 @@
 
     recording = true;
     logData = [];
-    maxLean = 0; maxPitch = 0; maxSpeedKmh = 0;
+    maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0; maxSpeedKmh = 0;
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
     totalDistanceM = 0; lastLat = null; lastLon = null;
