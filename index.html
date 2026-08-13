@@ -120,6 +120,14 @@
   .map-nav-btn.active { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
   .map-empty { position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center; background: var(--bg); font-family: var(--mono); font-size:11px; color: var(--muted); text-align:center; padding:10px; }
 
+  .map-recenter-btn {
+    position:absolute; bottom:8px; right:8px; z-index:401; width:34px; height:34px; border-radius:50%;
+    background: var(--overlay-bg); border:1px solid var(--panel-edge); display:none;
+    align-items:center; justify-content:center; font-size:16px; cursor:pointer;
+    box-shadow: 0 0 10px rgba(46,142,255,.15);
+  }
+  .map-recenter-btn.show { display:flex; }
+
   .nav-panel {
     position:absolute; left:8px; bottom:34px; z-index:401; display:none;
     align-items:center; gap:8px; background: var(--overlay-bg); border:1px solid var(--panel-edge);
@@ -267,6 +275,7 @@
         <div class="map-arrow" id="mapArrow"></div>
         <div class="map-badge"><b id="distVal">0.0</b> km</div>
         <div class="map-nav-btn" id="mapNavBtn">🧭</div>
+        <div class="map-recenter-btn" id="mapRecenterBtn">📍</div>
         <div class="route-info" id="routeInfoEl"></div>
         <div class="nav-panel" id="navPanelEl">
           <div class="nav-panel-chevron" id="navPanelChevron">▲</div>
@@ -368,6 +377,7 @@
   const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose');
   const themeToggle = $('themeToggle');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
+  const mapRecenterBtn = $('mapRecenterBtn');
   const waypointList = $('waypointList'), addWaypointBtn = $('addWaypointBtn');
   const voiceToggle = $('voiceToggle');
   const navPanelEl = $('navPanelEl'), navPanelChevron = $('navPanelChevron'), navPanelText = $('navPanelText'), navPanelDist = $('navPanelDist');
@@ -586,6 +596,12 @@
         directionsRendererGlow.setDirections(result);
         mapNavBtn.classList.add('active');
         navInfo.textContent = 'Percorso impostato ✓';
+        // Mostra subito tutto il percorso (tappe comprese) invece di restare centrati sul GPS —
+        // l'utente può toccare mapRecenterBtn per tornare a seguire la posizione quando riparte.
+        if (result.routes[0] && result.routes[0].bounds) {
+          gmap.fitBounds(result.routes[0].bounds, 50);
+          setMapFollowing(false);
+        }
         startNavigation(result);
         speak('Navigazione avviata verso ' + dest);
         setTimeout(closeNav, 700);
@@ -598,6 +614,7 @@
     if (directionsRenderer) directionsRenderer.setDirections({ routes: [] });
     if (directionsRendererGlow) directionsRendererGlow.setDirections({ routes: [] });
     stopNavigation();
+    setMapFollowing(true);
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     mapNavBtn.classList.remove('active');
     navInfo.textContent = 'Percorso annullato.';
@@ -705,6 +722,18 @@
 
   let totalDistanceM = 0;
   let gmap = null, directionsService = null, directionsRenderer = null, directionsRendererGlow = null;
+  // true = la mappa segue il GPS (centro + zoom automatici); false = l'utente sta guardando in giro
+  // (pan/zoom manuale, o ha appena impostato un percorso) — updateMap() smette di ricentrare finché
+  // non si preme il pulsante "torna alla posizione" (mapRecenterBtn).
+  let mapFollowing = true;
+  function setMapFollowing(on){
+    mapFollowing = on;
+    mapRecenterBtn.classList.toggle('show', !on);
+  }
+  mapRecenterBtn.addEventListener('click', () => {
+    setMapFollowing(true);
+    if (gmap && lastLat !== null && lastLon !== null) gmap.setCenter({ lat: lastLat, lng: lastLon });
+  });
 
   function setStatus(live, label){ statusDot.classList.toggle('live', live); statusText.textContent = label; }
 
@@ -865,8 +894,12 @@
     mapEmpty.style.display = 'none';
     gmap = new google.maps.Map(document.getElementById('gmap'), {
       center: { lat, lng: lon }, zoom: 17, styles: mapStyleForTheme(),
-      disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false
+      disableDefaultUI: true, gestureHandling: 'greedy', clickableIcons: false
     });
+    // dragstart scatta solo su trascinamento reale dell'utente (mai su setCenter/fitBounds
+    // programmatici) — è il modo standard per distinguere "l'utente sta guardando in giro" da
+    // "stiamo ricentrando noi", vedi setMapFollowing().
+    gmap.addListener('dragstart', () => setMapFollowing(false));
     directionsService = new google.maps.DirectionsService();
     // Renderer "glow": traccia larga e semi-trasparente sotto quella nitida, stesso colore —
     // due DirectionsRenderer sulla stessa mappa, entrambi aggiornati con lo stesso risultato.
@@ -882,8 +915,10 @@
 
   function updateMap(lat, lon, kmh, heading){
     if (!gmap) { ensureMap(lat, lon); return; }
-    gmap.setCenter({ lat, lng: lon });
-    gmap.setZoom(zoomForSpeed(kmh));
+    if (mapFollowing) {
+      gmap.setCenter({ lat, lng: lon });
+      gmap.setZoom(zoomForSpeed(kmh));
+    }
     if (heading !== null && heading !== undefined && !isNaN(heading)) {
       lastHeading = heading;
       mapArrow.style.transform = `translate(-50%,-50%) rotate(${heading}deg)`;
