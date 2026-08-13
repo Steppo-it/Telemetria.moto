@@ -400,6 +400,16 @@
     }
   }
 
+  // Beccheggio dal vettore di gravità stimato (gEst) invece che da deviceorientation.beta:
+  // beta è un angolo di Eulero e soffre di gimbal lock/salti oltre ~90° di inclinazione
+  // (es. durante un'impennata, beta può saltare a valori come ~-350°). atan2 su due
+  // componenti del vettore di gravità resta continuo su tutto l'intervallo, senza quel salto.
+  function computePitchFromGravity(gx, gy, gz, angle){
+    const comp = compensateAccelXY(gx, gy, angle);
+    const rad = Math.atan2(-comp.y, Math.sqrt(comp.x * comp.x + gz * gz));
+    return rad * 180 / Math.PI;
+  }
+
   /* generic short-lived peak-hold-with-decay ("ghost"), used only for G-force */
   function makePeakHold(holdMs, fadeMs){
     let peak = 0, sign = 1, peakTime = performance.now();
@@ -479,11 +489,10 @@
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) compassHeading = e.webkitCompassHeading;
     const angle = getScreenAngle();
     const comp = compensateOrientation(e.beta || 0, e.gamma, angle);
-    lastRawRoll = comp.roll; lastRawPitch = comp.pitch;
+    lastRawRoll = comp.roll;
     currentLean = comp.roll - leanOffset;
-    currentPitch = comp.pitch - pitchOffset;
     updateLeanGauge(currentLean);
-    updatePitchGauge(currentPitch);
+    // il beccheggio (currentPitch) è calcolato in handleMotion() da computePitchFromGravity()
 
     const now = performance.now();
     if (lastGammaForRate !== null && lastGammaTime !== null) {
@@ -518,6 +527,11 @@
     const lx = rx - gEst.x, ly = ry - gEst.y, lz = rz - gEst.z;
 
     const angle = getScreenAngle();
+
+    lastRawPitch = computePitchFromGravity(gEst.x, gEst.y, gEst.z, angle);
+    currentPitch = lastRawPitch - pitchOffset;
+    updatePitchGauge(currentPitch);
+
     const comp = compensateAccelXY(lx, ly, angle);
     linear.x = comp.x; linear.y = comp.y; linear.z = lz;
 
