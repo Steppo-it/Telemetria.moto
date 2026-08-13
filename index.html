@@ -121,12 +121,12 @@
   .map-empty { position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center; background: var(--bg); font-family: var(--mono); font-size:11px; color: var(--muted); text-align:center; padding:10px; }
 
   .nav-panel {
-    position:absolute; left:8px; bottom:8px; z-index:401; display:none;
+    position:absolute; left:8px; bottom:34px; z-index:401; display:none;
     align-items:center; gap:8px; background: var(--overlay-bg); border:1px solid var(--panel-edge);
     border-radius:9px; padding:6px 10px; max-width: calc(100% - 16px);
   }
   .nav-panel.show { display:flex; }
-  .nav-panel-chevron { font-family: var(--mono); font-size:20px; color: var(--blue-glow); flex:0 0 auto; }
+  .nav-panel-chevron { font-family: var(--mono); font-size:20px; color: var(--accent); flex:0 0 auto; }
   .nav-panel-body { min-width:0; }
   .nav-panel-text { font-family: var(--mono); font-size:11px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
   .nav-panel-dist { font-family: var(--mono); font-size:10px; color: var(--ink-dim); margin-top:1px; }
@@ -221,7 +221,7 @@
   /* ============ popovers (settings + nav) ============ */
   .popover-backdrop { position:fixed; inset:0; background: rgba(0,0,0,.55); z-index:900; display:none; }
   .popover-backdrop.open { display:block; }
-  .popover-panel { position:fixed; bottom:12px; right:12px; left:12px; z-index:901; background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:14px; box-shadow: 0 0 30px rgba(46,142,255,.25); display:none; }
+  .popover-panel { position:fixed; bottom:12px; right:12px; left:12px; z-index:901; background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:14px; box-shadow: 0 0 30px rgba(46,142,255,.25); display:none; max-height: calc(100vh - 24px); overflow-y: auto; }
   .popover-panel.open { display:block; }
   .popover-title { font-family: var(--disp); font-size:13px; letter-spacing:1px; color: var(--ink); margin-bottom:10px; }
   .settings-row { display:flex; justify-content:space-between; align-items:center; font-family: var(--mono); font-size:11px; color: var(--text); padding:8px 0; border-top:1px solid var(--panel-edge); }
@@ -431,6 +431,7 @@
   function chevronForManeuver(maneuver){ return MANEUVER_CHEVRON[maneuver] || '▲'; }
 
   function startNavigation(result){
+    ensureGps();
     navSteps = [];
     const legs = result.routes[0].legs;
     legs.forEach((leg, legIdx) => {
@@ -460,6 +461,7 @@
     navStepIndex = 0;
     navPanelEl.classList.remove('show');
     routeInfoEl.classList.remove('show');
+    stopGpsIfIdle();
   }
 
   function updateNavPanel(){
@@ -596,7 +598,7 @@
     if (directionsRenderer) directionsRenderer.setDirections({ routes: [] });
     if (directionsRendererGlow) directionsRendererGlow.setDirections({ routes: [] });
     stopNavigation();
-    speechSynthesis.cancel();
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
     mapNavBtn.classList.remove('active');
     navInfo.textContent = 'Percorso annullato.';
   });
@@ -672,6 +674,19 @@
   let leanOffset = 0, pitchOffset = 0;
   let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0;
   let watchId = null;
+  function ensureGps(){
+    if (watchId !== null) return;
+    if (!navigator.geolocation) return;
+    watchId = navigator.geolocation.watchPosition(handlePosition, (err) => {
+      logInfo.textContent = 'GPS non disponibile: ' + err.message;
+    }, { enableHighAccuracy: true, maximumAge: 500, timeout: 8000 });
+  }
+  function stopGpsIfIdle(){
+    if (!recording && !navActive && watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+  }
   let logData = [];
   let lastLat = null, lastLon = null;
   let compassHeading = null, lastHeading = 0;
@@ -970,11 +985,7 @@
     const ok = await ensureSensors();
     if (!ok) { mainBtn.disabled = false; mainBtn.textContent = 'Riprova'; return; }
 
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(handlePosition, (err) => {
-        logInfo.textContent = 'GPS non disponibile: ' + err.message;
-      }, { enableHighAccuracy:true, maximumAge:500, timeout:8000 });
-    }
+    ensureGps();
 
     recording = true;
     logData = [];
@@ -996,7 +1007,7 @@
 
   function stop(){
     recording = false;
-    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    stopGpsIfIdle();
     setStatus(false, 'FERMO');
     mainBtn.textContent = 'Avvia';
     mainBtn.classList.remove('stop'); mainBtn.classList.add('start');
