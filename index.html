@@ -90,7 +90,7 @@
   /* ============ MAP (left, resizable) ============ */
   .col-map {
     flex: 0 0 var(--map-pct); min-width:0; position:relative;
-    border-radius:12px; overflow:hidden; background: var(--bg2);
+    border-radius:0; overflow:hidden; background: var(--bg2);
   }
   .col-map::after {
     /* bottom:22px (invece di 0) lascia libero l'angolo in basso a destra della mappa, dove
@@ -405,6 +405,7 @@
     document.documentElement.setAttribute('data-theme', next);
     try { localStorage.setItem('moto_theme', next); } catch(e){}
     refreshThemeToggleLabel();
+    if (gmap) gmap.setOptions({ styles: mapStyleForTheme() });
   });
   refreshThemeToggleLabel();
 
@@ -580,6 +581,7 @@
     }, (result, status) => {
       if (status === 'OK') {
         directionsRenderer.setDirections(result);
+        directionsRendererGlow.setDirections(result);
         mapNavBtn.classList.add('active');
         navInfo.textContent = 'Percorso impostato ✓';
         startNavigation(result);
@@ -592,6 +594,7 @@
   });
   navClearBtn.addEventListener('click', () => {
     if (directionsRenderer) directionsRenderer.setDirections({ routes: [] });
+    if (directionsRendererGlow) directionsRendererGlow.setDirections({ routes: [] });
     stopNavigation();
     speechSynthesis.cancel();
     mapNavBtn.classList.remove('active');
@@ -686,7 +689,7 @@
   let lastGammaForRate = null, lastGammaTime = null;
 
   let totalDistanceM = 0;
-  let gmap = null, directionsService = null, directionsRenderer = null;
+  let gmap = null, directionsService = null, directionsRenderer = null, directionsRendererGlow = null;
 
   function setStatus(live, label){ statusDot.classList.toggle('live', live); statusText.textContent = label; }
 
@@ -810,29 +813,52 @@
     return 17;
   }
 
-  // dark "ghost" map style — muted roads/labels, bright accents left to the route line
+  // Notturno: nero puro (stesso --bg dell'HUD), strade chiare ben in risalto sul nero.
   const NIGHT_STYLE = [
-    { elementType: "geometry", stylers: [{ color: "#0A1526" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#5C7699" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#050A14" }] },
-    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#17283F" }] },
+    { elementType: "geometry", stylers: [{ color: "#000000" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#5C6A7D" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#000000" }] },
+    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#1C2128" }] },
     { featureType: "poi", stylers: [{ visibility: "off" }] },
-    { featureType: "road", elementType: "geometry", stylers: [{ color: "#17283F" }] },
-    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#0A1526" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#1C3050" }] },
-    { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#0A1526" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#E8ECF0" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#000000" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#FFFFFF" }] },
+    { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#000000" }] },
     { featureType: "transit", stylers: [{ visibility: "off" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#08111E" }] }
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0A0E14" }] }
   ];
+  // Diurno: bianco puro, strade scure ben in risalto sul bianco — stesso principio invertito.
+  const DAY_STYLE = [
+    { elementType: "geometry", stylers: [{ color: "#FFFFFF" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#3D4C63" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#FFFFFF" }] },
+    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#DCE2EA" }] },
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#1B2430" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#FFFFFF" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#000000" }] },
+    { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#FFFFFF" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#DCE2EA" }] }
+  ];
+  function mapStyleForTheme(){
+    return document.documentElement.getAttribute('data-theme') === 'light' ? DAY_STYLE : NIGHT_STYLE;
+  }
 
   function ensureMap(lat, lon){
     if (gmap || !window.google) return;
     mapEmpty.style.display = 'none';
     gmap = new google.maps.Map(document.getElementById('gmap'), {
-      center: { lat, lng: lon }, zoom: 17, styles: NIGHT_STYLE,
+      center: { lat, lng: lon }, zoom: 17, styles: mapStyleForTheme(),
       disableDefaultUI: true, gestureHandling: 'none', clickableIcons: false
     });
     directionsService = new google.maps.DirectionsService();
+    // Renderer "glow": traccia larga e semi-trasparente sotto quella nitida, stesso colore —
+    // due DirectionsRenderer sulla stessa mappa, entrambi aggiornati con lo stesso risultato.
+    directionsRendererGlow = new google.maps.DirectionsRenderer({
+      map: gmap, suppressMarkers: true, preserveViewport: true,
+      polylineOptions: { strokeColor: '#5CC8FF', strokeOpacity: 0.35, strokeWeight: 14 }
+    });
     directionsRenderer = new google.maps.DirectionsRenderer({
       map: gmap, suppressMarkers: true, preserveViewport: true,
       polylineOptions: { strokeColor: '#5CC8FF', strokeOpacity: 0.95, strokeWeight: 6 }
