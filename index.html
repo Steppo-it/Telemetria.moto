@@ -210,6 +210,22 @@
   .settings-row:first-of-type { border-top:none; }
   .settings-toggle { appearance:none; border:1px solid var(--blue-dim); background:transparent; color: var(--ink); font-family: var(--mono); font-size:10.5px; padding:6px 12px; border-radius:7px; }
   .settings-input { width:100%; background:var(--hair); border:1px solid var(--panel-edge); border-radius:8px; padding:11px; color:var(--text); font-family:var(--mono); font-size:13px; margin-bottom:10px; }
+  .waypoint-row { display:flex; gap:6px; margin-bottom:8px; }
+  .waypoint-row .settings-input { margin-bottom:0; }
+  .waypoint-remove { flex:0 0 auto; width:34px; border:1px solid var(--panel-edge); background:transparent; color:var(--ink-dim); border-radius:8px; font-size:16px; line-height:1; cursor:pointer; }
+  #addWaypointBtn { width:100%; margin-bottom:10px; }
+  /* Google Places inietta #pac-container in <body>, fuori dal nostro markup — tema forzato con
+     !important perché il foglio di stile di Google usa selettori altrettanto specifici. */
+  .pac-container {
+    background: var(--bg2) !important; border:1px solid var(--panel-edge) !important;
+    border-radius:8px !important; font-family: var(--mono) !important; margin-top:4px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,.4) !important;
+  }
+  .pac-item { color: var(--ink) !important; border-top-color: var(--hair) !important; padding:8px 10px !important; font-size:12px !important; }
+  .pac-item:hover, .pac-item-selected { background: var(--hair) !important; }
+  .pac-item-query { color: var(--ink) !important; }
+  .pac-matched { color: var(--blue-glow) !important; }
+  .pac-icon { display:none !important; }
 </style>
 </head>
 <body>
@@ -295,6 +311,8 @@
   <div class="popover-backdrop" id="navBackdrop"></div>
   <div class="popover-panel" id="navPanel">
     <div class="popover-title">NAVIGATORE</div>
+    <div id="waypointList"></div>
+    <button class="btn-mini" id="addWaypointBtn" type="button">+ Aggiungi tappa</button>
     <input type="text" id="destInput" class="settings-input" placeholder="Indirizzo o luogo di destinazione..." />
     <div class="mini-actions-row">
       <button class="btn-mini" id="navGoBtn">Vai</button>
@@ -323,6 +341,7 @@
   const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose');
   const themeToggle = $('themeToggle');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
+  const waypointList = $('waypointList'), addWaypointBtn = $('addWaypointBtn');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
   const root = document.documentElement;
@@ -360,7 +379,43 @@
   refreshThemeToggleLabel();
 
   /* ---------- navigator popover ---------- */
-  function openNav(){ navPanel.classList.add('open'); navBackdrop.classList.add('open'); }
+  let waypointInputs = [];
+  let destAutocompleteReady = false;
+
+  function attachAutocomplete(inputEl){
+    if (window.google && google.maps && google.maps.places) {
+      new google.maps.places.Autocomplete(inputEl, { fields: ['formatted_address', 'geometry'] });
+    }
+  }
+  function tryAttachDestAutocomplete(){
+    if (destAutocompleteReady) return;
+    attachAutocomplete(destInput);
+    if (window.google && google.maps && google.maps.places) destAutocompleteReady = true;
+  }
+  function createWaypointInput(){
+    const row = document.createElement('div');
+    row.className = 'waypoint-row';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'settings-input';
+    input.placeholder = 'Tappa intermedia...';
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'waypoint-remove';
+    removeBtn.textContent = '×';
+    removeBtn.addEventListener('click', () => {
+      waypointList.removeChild(row);
+      waypointInputs = waypointInputs.filter(w => w !== input);
+    });
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    waypointList.appendChild(row);
+    waypointInputs.push(input);
+    attachAutocomplete(input);
+  }
+  addWaypointBtn.addEventListener('click', createWaypointInput);
+
+  function openNav(){ navPanel.classList.add('open'); navBackdrop.classList.add('open'); tryAttachDestAutocomplete(); }
   function closeNav(){ navPanel.classList.remove('open'); navBackdrop.classList.remove('open'); }
   mapNavBtn.addEventListener('click', openNav);
   navCloseBtn.addEventListener('click', closeNav);
@@ -370,10 +425,15 @@
     if (!dest) return;
     if (lastLat === null) { navInfo.textContent = 'Aspetta il segnale GPS.'; return; }
     if (!window.google || !directionsService) { navInfo.textContent = 'Google Maps non caricato — controlla la API key.'; return; }
+    const waypoints = waypointInputs
+      .map(w => w.value.trim())
+      .filter(v => v.length > 0)
+      .map(v => ({ location: v, stopover: true }));
     navInfo.textContent = 'Calcolo percorso…';
     directionsService.route({
       origin: { lat: lastLat, lng: lastLon },
       destination: dest,
+      waypoints,
       travelMode: google.maps.TravelMode.DRIVING
     }, (result, status) => {
       if (status === 'OK') {
@@ -790,6 +850,6 @@
 </script>
 
 <!-- Sostituisci YOUR_GOOGLE_MAPS_API_KEY con la tua chiave (vedi README) -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBSQER-qCTUsdaoAp0LYanT7Su0sX9OnDk&v=weekly" defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBSQER-qCTUsdaoAp0LYanT7Su0sX9OnDk&v=weekly&libraries=places" defer></script>
 </body>
 </html>
