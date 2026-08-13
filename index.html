@@ -120,6 +120,24 @@
   .map-nav-btn.active { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
   .map-empty { position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center; background: var(--bg); font-family: var(--mono); font-size:11px; color: var(--muted); text-align:center; padding:10px; }
 
+  .nav-panel {
+    position:absolute; left:8px; bottom:8px; z-index:401; display:none;
+    align-items:center; gap:8px; background: var(--overlay-bg); border:1px solid var(--panel-edge);
+    border-radius:9px; padding:6px 10px; max-width: calc(100% - 16px);
+  }
+  .nav-panel.show { display:flex; }
+  .nav-panel-chevron { font-family: var(--mono); font-size:20px; color: var(--blue-glow); flex:0 0 auto; }
+  .nav-panel-body { min-width:0; }
+  .nav-panel-text { font-family: var(--mono); font-size:11px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+  .nav-panel-dist { font-family: var(--mono); font-size:10px; color: var(--ink-dim); margin-top:1px; }
+
+  .route-info {
+    position:absolute; top:44px; right:8px; z-index:401; display:none;
+    background: var(--overlay-bg); border:1px solid var(--panel-edge); border-radius:7px;
+    padding:4px 8px; font-family: var(--mono); font-size:10px; color: var(--ink);
+  }
+  .route-info.show { display:block; }
+
   .resize-handle { flex: 0 0 20px; display:flex; align-items:center; justify-content:center; cursor:ew-resize; touch-action:none; position:relative; z-index:5; }
   .resize-handle .grip { width:5px; height:44px; border-radius:3px; background: var(--panel-edge); box-shadow: 0 0 8px rgba(46,142,255,.15); transition: background .15s; }
   .resize-handle:active .grip, .resize-handle.dragging .grip { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
@@ -249,6 +267,14 @@
         <div class="map-arrow" id="mapArrow"></div>
         <div class="map-badge"><b id="distVal">0.0</b> km</div>
         <div class="map-nav-btn" id="mapNavBtn">🧭</div>
+        <div class="route-info" id="routeInfoEl"></div>
+        <div class="nav-panel" id="navPanelEl">
+          <div class="nav-panel-chevron" id="navPanelChevron">▲</div>
+          <div class="nav-panel-body">
+            <div class="nav-panel-text" id="navPanelText"></div>
+            <div class="nav-panel-dist" id="navPanelDist"></div>
+          </div>
+        </div>
         <div class="map-empty" id="mapEmpty">In attesa di segnale GPS…</div>
       </div>
 
@@ -344,6 +370,8 @@
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
   const waypointList = $('waypointList'), addWaypointBtn = $('addWaypointBtn');
   const voiceToggle = $('voiceToggle');
+  const navPanelEl = $('navPanelEl'), navPanelChevron = $('navPanelChevron'), navPanelText = $('navPanelText'), navPanelDist = $('navPanelDist');
+  const routeInfoEl = $('routeInfoEl');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
   const root = document.documentElement;
@@ -379,6 +407,99 @@
     refreshThemeToggleLabel();
   });
   refreshThemeToggleLabel();
+
+  /* ---------- avanzamento navigazione (tappe, pannello, distanza/ETA) ---------- */
+  let navSteps = [];
+  let navStepIndex = 0;
+  let navAnnounced = false;
+  let navActive = false;
+
+  function stripHtml(html){
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+  }
+
+  const MANEUVER_CHEVRON = {
+    'turn-left': '◀', 'turn-slight-left': '◀', 'turn-sharp-left': '◀', 'uturn-left': '◀',
+    'turn-right': '▶', 'turn-slight-right': '▶', 'turn-sharp-right': '▶', 'uturn-right': '▶',
+    'roundabout-left': '◀', 'roundabout-right': '▶',
+    'merge': '▲', 'fork-left': '◀', 'fork-right': '▶', 'ramp-left': '◀', 'ramp-right': '▶',
+    'straight': '▲'
+  };
+  function chevronForManeuver(maneuver){ return MANEUVER_CHEVRON[maneuver] || '▲'; }
+
+  function startNavigation(result){
+    navSteps = [];
+    const legs = result.routes[0].legs;
+    legs.forEach((leg, legIdx) => {
+      leg.steps.forEach((step, stepIdx) => {
+        navSteps.push({
+          instructionText: stripHtml(step.instructions),
+          maneuver: step.maneuver || 'straight',
+          endLat: step.end_location.lat(), endLon: step.end_location.lng(),
+          distanceM: step.distance ? step.distance.value : 0,
+          durationS: step.duration ? step.duration.value : 0,
+          isLegEnd: legIdx < legs.length - 1 && stepIdx === leg.steps.length - 1
+        });
+      });
+    });
+    navStepIndex = 0;
+    navAnnounced = false;
+    navActive = true;
+    navPanelEl.classList.add('show');
+    routeInfoEl.classList.add('show');
+    updateNavPanel();
+    updateRouteInfo();
+  }
+
+  function stopNavigation(){
+    navActive = false;
+    navSteps = [];
+    navStepIndex = 0;
+    navPanelEl.classList.remove('show');
+    routeInfoEl.classList.remove('show');
+  }
+
+  function updateNavPanel(){
+    if (!navActive || navStepIndex >= navSteps.length) return;
+    const step = navSteps[navStepIndex];
+    navPanelChevron.textContent = chevronForManeuver(step.maneuver);
+    navPanelText.textContent = step.instructionText;
+  }
+
+  function updateRouteInfo(){
+    if (!navActive) return;
+    let remM = 0, remS = 0;
+    for (let i = navStepIndex; i < navSteps.length; i++) { remM += navSteps[i].distanceM; remS += navSteps[i].durationS; }
+    routeInfoEl.textContent = (remM / 1000).toFixed(1) + ' km · ' + Math.round(remS / 60) + ' min';
+  }
+
+  function updateNavProgress(lat, lon){
+    if (!navActive || navStepIndex >= navSteps.length) return;
+    const step = navSteps[navStepIndex];
+    const dist = distanceMeters(lat, lon, step.endLat, step.endLon);
+    navPanelDist.textContent = dist >= 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m';
+
+    if (!navAnnounced && dist < 150) {
+      speak(step.instructionText);
+      navAnnounced = true;
+    }
+    if (dist < 30) {
+      if (step.isLegEnd) speak('Tappa raggiunta.');
+      navStepIndex++;
+      navAnnounced = false;
+      if (navStepIndex >= navSteps.length) {
+        speak('Sei arrivato a destinazione.');
+        navPanelText.textContent = 'Arrivato';
+        navPanelDist.textContent = '';
+        updateRouteInfo();
+        return;
+      }
+      updateNavPanel();
+    }
+    updateRouteInfo();
+  }
 
   /* ---------- voce (Web Speech API) ---------- */
   const VOICE_KEY = 'moto_voice';
@@ -461,6 +582,7 @@
         directionsRenderer.setDirections(result);
         mapNavBtn.classList.add('active');
         navInfo.textContent = 'Percorso impostato ✓';
+        startNavigation(result);
         speak('Navigazione avviata verso ' + dest);
         setTimeout(closeNav, 700);
       } else {
@@ -470,6 +592,7 @@
   });
   navClearBtn.addEventListener('click', () => {
     if (directionsRenderer) directionsRenderer.setDirections({ routes: [] });
+    stopNavigation();
     speechSynthesis.cancel();
     mapNavBtn.classList.remove('active');
     navInfo.textContent = 'Percorso annullato.';
@@ -726,6 +849,14 @@
     }
   }
 
+  // Approssimazione equirettangolare, adeguata per le distanze brevi che ci servono qui
+  // (odometro di sessione, avanzamento tappe di navigazione) — non per distanze globali.
+  function distanceMeters(lat1, lon1, lat2, lon2){
+    const dLon = (lon2 - lon1) * Math.cos(lat1 * Math.PI / 180) * 111320;
+    const dLat = (lat2 - lat1) * 110540;
+    return Math.hypot(dLon, dLat);
+  }
+
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
     speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="mini-unit">km/h</span>';
@@ -736,15 +867,14 @@
     else heading = lastHeading;
 
     if (lastLat !== null && lastLon !== null) {
-      const dLon = (pos.coords.longitude - lastLon) * Math.cos(lastLat * Math.PI / 180) * 111320;
-      const dLat = (pos.coords.latitude - lastLat) * 110540;
-      const d = Math.hypot(dLon, dLat);
+      const d = distanceMeters(lastLat, lastLon, pos.coords.latitude, pos.coords.longitude);
       if (d > 0.5) totalDistanceM += d;
     }
     lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
     distVal.textContent = (totalDistanceM / 1000).toFixed(1);
 
     updateMap(lastLat, lastLon, kmh, heading);
+    updateNavProgress(lastLat, lastLon);
 
     if (recording) {
       const t = window.__latestTelemetry || {};
