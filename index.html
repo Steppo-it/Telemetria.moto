@@ -314,6 +314,7 @@
     <div id="waypointList"></div>
     <button class="btn-mini" id="addWaypointBtn" type="button">+ Aggiungi tappa</button>
     <input type="text" id="destInput" class="settings-input" placeholder="Indirizzo o luogo di destinazione..." />
+    <div class="settings-row"><span>Voce</span><button class="settings-toggle" id="voiceToggle">Attiva</button></div>
     <div class="mini-actions-row">
       <button class="btn-mini" id="navGoBtn">Vai</button>
       <button class="btn-mini" id="navClearBtn">Annulla percorso</button>
@@ -342,6 +343,7 @@
   const themeToggle = $('themeToggle');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
   const waypointList = $('waypointList'), addWaypointBtn = $('addWaypointBtn');
+  const voiceToggle = $('voiceToggle');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
   const root = document.documentElement;
@@ -377,6 +379,25 @@
     refreshThemeToggleLabel();
   });
   refreshThemeToggleLabel();
+
+  /* ---------- voce (Web Speech API) ---------- */
+  const VOICE_KEY = 'moto_voice';
+  let voiceEnabled = (function(){ try { return localStorage.getItem(VOICE_KEY) !== 'off'; } catch(e){ return true; } })();
+  function refreshVoiceToggleLabel(){ voiceToggle.textContent = voiceEnabled ? 'Attiva' : 'Disattivata'; }
+  voiceToggle.addEventListener('click', () => {
+    voiceEnabled = !voiceEnabled;
+    try { localStorage.setItem(VOICE_KEY, voiceEnabled ? 'on' : 'off'); } catch(e){}
+    refreshVoiceToggleLabel();
+  });
+  refreshVoiceToggleLabel();
+
+  function speak(text){
+    if (!voiceEnabled) return;
+    if (!('speechSynthesis' in window)) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'it-IT';
+    speechSynthesis.speak(utter);
+  }
 
   /* ---------- navigator popover ---------- */
   let waypointInputs = [];
@@ -440,6 +461,7 @@
         directionsRenderer.setDirections(result);
         mapNavBtn.classList.add('active');
         navInfo.textContent = 'Percorso impostato ✓';
+        speak('Navigazione avviata verso ' + dest);
         setTimeout(closeNav, 700);
       } else {
         navInfo.textContent = 'Destinazione non trovata (' + status + ')';
@@ -448,6 +470,7 @@
   });
   navClearBtn.addEventListener('click', () => {
     if (directionsRenderer) directionsRenderer.setDirections({ routes: [] });
+    speechSynthesis.cancel();
     mapNavBtn.classList.remove('active');
     navInfo.textContent = 'Percorso annullato.';
   });
