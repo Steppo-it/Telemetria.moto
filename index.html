@@ -28,7 +28,6 @@
     --blue-glow: #5CC8FF;
     --amber: #FF9A3D;
     --red: #FF4436;
-    --green: #35D48A;
     /* alias legacy: mantengono coerente col tema il resto della UI non toccata in questo piano (mappa, popover) */
     --panel: var(--bg2);
     --panel-edge: var(--hair);
@@ -36,6 +35,9 @@
     --muted: var(--ink-dim);
     --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
     --disp: 'Orbitron', 'Bebas Neue', sans-serif;
+    /* overlay semi-trasparente per badge/pulsanti sopra la mappa: derivato da --bg per restare
+       leggibile in entrambi i temi (scuro: nero-blu translucido; chiaro: bianco translucido) */
+    --overlay-bg: rgba(5,10,20,.75);
   }
   :root[data-theme="light"]{
     --ink: #1B2430;
@@ -44,6 +46,7 @@
     --accent: #3D4C63;
     --bg: #F4F6F9;
     --bg2: #FFFFFF;
+    --overlay-bg: rgba(255,255,255,.75);
   }
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
 
@@ -73,14 +76,14 @@
 
   .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex:0 0 auto; }
   .brand { font-family: var(--disp); font-weight:700; font-size:14px; letter-spacing:2px; color: var(--text); text-shadow: 0 0 12px rgba(46,142,255,.5); }
-  .brand span { color: var(--blue-glow); }
+  .brand span { color: var(--accent); }
   .status-dot { width:7px; height:7px; border-radius:50%; background: var(--muted); }
   .status-dot.live { background: var(--red); box-shadow: 0 0 10px 2px rgba(255,68,54,.6); animation: pulse 1.4s infinite; }
   @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
   .status-row { display:flex; align-items:center; gap:6px; font-family: var(--mono); font-size:10px; color: var(--muted); }
 
   .perm-note { font-size:8.5px; color: var(--muted); line-height:1.3; background: var(--panel); border:1px solid var(--panel-edge); border-radius:6px; padding:4px 8px; margin-bottom:4px; flex:0 0 auto; }
-  .perm-note b { color: var(--blue-glow); }
+  .perm-note b { color: var(--ink); }
 
   .layout { display:flex; flex-direction:row; gap:0; flex:1 1 auto; min-height:0; }
 
@@ -90,7 +93,10 @@
     border-radius:12px; overflow:hidden; background: var(--bg2);
   }
   .col-map::after {
-    content:''; position:absolute; top:0; bottom:0; right:0; width:70px;
+    /* bottom:22px (invece di 0) lascia libero l'angolo in basso a destra della mappa, dove
+       Google Maps disegna la striscia di attribuzione ("Map data © / Termini / Segnala un
+       errore") — deve restare sempre completamente visibile e non velata dalla dissolvenza. */
+    content:''; position:absolute; top:0; bottom:22px; right:0; width:70px;
     background: linear-gradient(90deg, transparent, var(--bg) 92%);
     pointer-events:none; z-index:5;
   }
@@ -104,11 +110,11 @@
   }
   .map-arrow::after { content:''; position:absolute; left:-11px; top:22px; width:22px; height:8px; background: var(--amber); border-radius:0 0 4px 4px; opacity:.85; }
 
-  .map-badge { position:absolute; top:8px; left:8px; z-index:401; background: rgba(5,10,20,.75); border:1px solid var(--panel-edge); border-radius:7px; padding:4px 8px; font-family: var(--mono); font-size:10px; color: var(--text); box-shadow: 0 0 10px rgba(46,142,255,.15); }
-  .map-badge b { color: var(--blue-glow); }
+  .map-badge { position:absolute; top:8px; left:8px; z-index:401; background: var(--overlay-bg); border:1px solid var(--panel-edge); border-radius:7px; padding:4px 8px; font-family: var(--mono); font-size:10px; color: var(--text); box-shadow: 0 0 10px rgba(46,142,255,.15); }
+  .map-badge b { color: var(--ink); }
   .map-nav-btn {
     position:absolute; top:8px; right:8px; z-index:401; width:30px; height:30px; border-radius:8px;
-    background: rgba(5,10,20,.75); border:1px solid var(--panel-edge); display:flex; align-items:center; justify-content:center;
+    background: var(--overlay-bg); border:1px solid var(--panel-edge); display:flex; align-items:center; justify-content:center;
     font-size:15px; cursor:pointer; box-shadow: 0 0 10px rgba(46,142,255,.15);
   }
   .map-nav-btn.active { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
@@ -137,15 +143,18 @@
   }
   .lean-badge .gauge-chevron { font-size: clamp(20px, 5vh, 28px); }
   .pitch-badge .gauge-chevron { font-size: clamp(14px, 3.2vh, 18px); }
-  .gauge-chevron.warn { color: var(--amber); border-color: var(--amber); }
-  .gauge-chevron.danger { color: var(--red); border-color: var(--red); }
+  /* soglie colore warn/danger: solo la piega le usa (updateLeanGauge()) — il beccheggio non
+     ha mai soglie colore per spec, quindi queste regole sono scoped a .lean-badge invece di
+     essere globali, per rispecchiare in CSS un vincolo che finora esisteva solo in JS */
+  .lean-badge .gauge-chevron.warn { color: var(--amber); border-color: var(--amber); }
+  .lean-badge .gauge-chevron.danger { color: var(--red); border-color: var(--red); }
 
   .gauge-body { flex:0 0 auto; min-width:0; }
   .gauge-num { font-family: var(--disp); font-weight:800; line-height:1; color: var(--ink); letter-spacing:.5px; }
   .lean-badge .gauge-num { font-size: clamp(26px, 6.6vh, 38px); }
   .pitch-badge .gauge-num { font-size: clamp(16px, 4vh, 22px); }
-  .gauge-num.warn { color: var(--amber); }
-  .gauge-num.danger { color: var(--red); }
+  .lean-badge .gauge-num.warn { color: var(--amber); }
+  .lean-badge .gauge-num.danger { color: var(--red); }
   .gauge-sub { font-family: var(--mono); font-size:7.5px; letter-spacing:1.3px; color: var(--ink-dim); margin-top:1px; }
 
   .gauge-maxrow { margin-left:auto; text-align:right; font-family: var(--mono); font-size:7.5px; color: var(--ink-dim); line-height:1.6; white-space:nowrap; }
@@ -177,7 +186,7 @@
   }
   .btn-big:active { transform: scale(0.97); }
   .btn-big.start, .btn-big.stop { background: var(--ink); color: var(--bg); }
-  .btn-big.calib { background:transparent; border:2px solid var(--hair); color: var(--ink); }
+  .btn-big.calib { background:transparent; border:2px solid var(--ink-dim); color: var(--ink); }
   .btn-big[disabled] { opacity:.5; pointer-events:none; }
 
   .mini-actions-row { display:flex; gap:7px; }
@@ -191,11 +200,11 @@
   .popover-backdrop.open { display:block; }
   .popover-panel { position:fixed; bottom:12px; right:12px; left:12px; z-index:901; background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:14px; box-shadow: 0 0 30px rgba(46,142,255,.25); display:none; }
   .popover-panel.open { display:block; }
-  .popover-title { font-family: var(--disp); font-size:13px; letter-spacing:1px; color: var(--blue-glow); margin-bottom:10px; }
+  .popover-title { font-family: var(--disp); font-size:13px; letter-spacing:1px; color: var(--ink); margin-bottom:10px; }
   .settings-row { display:flex; justify-content:space-between; align-items:center; font-family: var(--mono); font-size:11px; color: var(--text); padding:8px 0; border-top:1px solid var(--panel-edge); }
   .settings-row:first-of-type { border-top:none; }
-  .settings-toggle { appearance:none; border:1px solid var(--blue-dim); background:transparent; color: var(--blue-glow); font-family: var(--mono); font-size:10.5px; padding:6px 12px; border-radius:7px; }
-  .settings-input { width:100%; background:#0F1D30; border:1px solid var(--panel-edge); border-radius:8px; padding:11px; color:var(--text); font-family:var(--mono); font-size:13px; margin-bottom:10px; }
+  .settings-toggle { appearance:none; border:1px solid var(--blue-dim); background:transparent; color: var(--ink); font-family: var(--mono); font-size:10.5px; padding:6px 12px; border-radius:7px; }
+  .settings-input { width:100%; background:var(--hair); border:1px solid var(--panel-edge); border-radius:8px; padding:11px; color:var(--text); font-family:var(--mono); font-size:13px; margin-bottom:10px; }
 </style>
 </head>
 <body>
@@ -242,7 +251,7 @@
                   <div class="gauge-num" id="pitchNumBig">--°</div>
                   <div class="gauge-sub" id="pitchSub">BECCHEGGIO</div>
                 </div>
-                <div class="gauge-maxrow">DOWN <b id="pitchMaxDown">--°</b><br>UP <b id="pitchMaxUp">--°</b></div>
+                <div class="gauge-maxrow">GIÙ <b id="pitchMaxDown">--°</b><br>SU <b id="pitchMaxUp">--°</b></div>
               </div>
             </div>
             <div class="gforce-bar">
@@ -404,6 +413,10 @@
   // beta è un angolo di Eulero e soffre di gimbal lock/salti oltre ~90° di inclinazione
   // (es. durante un'impennata, beta può saltare a valori come ~-350°). atan2 su due
   // componenti del vettore di gravità resta continuo su tutto l'intervallo, senza quel salto.
+  // Nota: per costruzione (atan2(y, sqrt(...)) con secondo argomento sempre >= 0) l'output è
+  // matematicamente limitato all'intervallo (-90°, 90°]: un dispositivo inclinato realmente
+  // oltre i 90° leggerà un valore saturato vicino a ±90° invece di continuare oltre — trade-off
+  // accettato, non un bug.
   function computePitchFromGravity(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
     const rad = Math.atan2(-comp.y, Math.sqrt(comp.x * comp.x + gz * gz));
@@ -484,6 +497,11 @@
     pitchMaxDownEl.textContent = maxPitchDown.toFixed(0) + '°';
   }
 
+  // Nota: il beccheggio NON viene più calcolato qui — dipende interamente dal fatto che
+  // devicemotion continui a scattare (vedi handleMotion()/computePitchFromGravity()). Se una
+  // combinazione browser/permessi consegna deviceorientation ma non devicemotion, il badge
+  // beccheggio smette di aggiornarsi (accettato per il target iOS, che concede entrambi i
+  // permessi con un solo prompt, ma da tenere presente).
   function handleOrientation(e){
     if (e.gamma === null) return;
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) compassHeading = e.webkitCompassHeading;
@@ -547,15 +565,13 @@
     subAccel += (accelTarget - subAccel) * SCORE_ALPHA;
     subComfort += (comfortIdx - subComfort) * SCORE_ALPHA;
     const overall = subAccel * 0.40 + subLean * 0.35 + subComfort * 0.25;
-    renderScore(overall, subAccel, subLean, subComfort);
+    renderScore(overall);
 
     if (recording) window.__latestTelemetry = { pitch: currentPitch, fwdG, latG, vertG, comfortIdx, score: overall };
   }
 
-  function renderScore(overall, a, l, c){
+  function renderScore(overall){
     scoreNum.textContent = overall.toFixed(0);
-    scoreNum.classList.remove('mid','low');
-    if (overall < 55) scoreNum.classList.add('low'); else if (overall < 78) scoreNum.classList.add('mid');
   }
 
   function zoomForSpeed(kmh){
@@ -669,8 +685,16 @@
     calibBtn.disabled = false;
     if (!ok) return;
     leanOffset = lastRawRoll;
-    pitchOffset = lastRawPitch;
-    if (lastRawAG) { gEst.x = lastRawAG.x; gEst.y = lastRawAG.y; gEst.z = lastRawAG.z; }
+    if (lastRawAG) {
+      gEst.x = lastRawAG.x; gEst.y = lastRawAG.y; gEst.z = lastRawAG.z;
+      // Ricalcola l'offset di beccheggio dal vettore di gravità appena resettato (gEst),
+      // non da lastRawPitch: lastRawPitch riflette lo stato di gEst PRIMA di questo reset,
+      // quindi riusarlo lascerebbe un residuo e il beccheggio non leggerebbe esattamente 0°
+      // subito dopo la calibrazione.
+      pitchOffset = computePitchFromGravity(gEst.x, gEst.y, gEst.z, getScreenAngle());
+    } else {
+      pitchOffset = lastRawPitch;
+    }
     logInfo.textContent = 'Sensori azzerati ✓';
     setTimeout(() => { if (!recording) logInfo.textContent = ''; }, 1800);
   });
