@@ -21,7 +21,7 @@
     --ink-dim: #5C6A7D;
     --hair: #1C2128;
     --accent: #8AA0BE;
-    --bg: #0B0D10;
+    --bg: #000000;
     --bg2: #0F1216;
     --blue: #2E8EFF;
     --blue-dim: #1C5FB8;
@@ -54,7 +54,7 @@
   html, body { margin:0; padding:0; height:100%; background: var(--bg); color: var(--text); font-family:'Inter',sans-serif; overscroll-behavior:none; user-select:none; }
   body {
     position:relative; display:flex; flex-direction:column; min-height:100vh;
-    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    padding: 2px max(8px, env(safe-area-inset-right)) 2px max(8px, env(safe-area-inset-left));
     overflow:hidden;
   }
   body::before {
@@ -141,8 +141,8 @@
     border:1px solid var(--hair); border-radius:6px; padding:5px 9px;
     transition: color .15s, border-color .15s;
   }
-  .lean-badge .gauge-chevron { font-size: clamp(20px, 5vh, 28px); }
-  .pitch-badge .gauge-chevron { font-size: clamp(14px, 3.2vh, 18px); }
+  .lean-badge .gauge-chevron { font-size: clamp(26px, 6.5vh, 36px); }
+  .pitch-badge .gauge-chevron { font-size: clamp(18px, 4.2vh, 24px); }
   /* soglie colore warn/danger: solo la piega le usa (updateLeanGauge()) — il beccheggio non
      ha mai soglie colore per spec, quindi queste regole sono scoped a .lean-badge invece di
      essere globali, per rispecchiare in CSS un vincolo che finora esisteva solo in JS */
@@ -151,32 +151,37 @@
 
   .gauge-body { flex:0 0 auto; min-width:0; }
   .gauge-num { font-family: var(--disp); font-weight:800; line-height:1; color: var(--ink); letter-spacing:.5px; }
-  .lean-badge .gauge-num { font-size: clamp(26px, 6.6vh, 38px); }
-  .pitch-badge .gauge-num { font-size: clamp(16px, 4vh, 22px); }
+  .lean-badge .gauge-num { font-size: clamp(34px, 8.5vh, 50px); }
+  .pitch-badge .gauge-num { font-size: clamp(20px, 5.2vh, 28px); }
   .lean-badge .gauge-num.warn { color: var(--amber); }
   .lean-badge .gauge-num.danger { color: var(--red); }
-  .gauge-sub { font-family: var(--mono); font-size:7.5px; letter-spacing:1.3px; color: var(--ink-dim); margin-top:1px; }
+  .gauge-sub { font-family: var(--mono); font-size:9.5px; letter-spacing:1.3px; color: var(--ink-dim); margin-top:2px; }
 
-  .gauge-maxrow { margin-left:auto; text-align:right; font-family: var(--mono); font-size:7.5px; color: var(--ink-dim); line-height:1.6; white-space:nowrap; }
-  .gauge-maxrow b { color: var(--ink); font-weight:600; }
+  .gauge-maxrow { margin-left:auto; text-align:right; font-family: var(--mono); font-size:10.5px; color: var(--ink-dim); line-height:1.7; white-space:nowrap; }
+  .gauge-maxrow b { color: var(--ink); font-weight:700; font-size:12px; }
 
   /* --- G force vertical bar --- */
   .gforce-bar {
-    width:20px; flex:0 0 auto; align-self:stretch; border-radius:4px; position:relative;
+    width:26px; flex:0 0 auto; align-self:stretch; border-radius:5px; position:relative;
     background: linear-gradient(180deg, var(--blue) 0%, #6FE0B8 26%, var(--hair) 48%, var(--hair) 52%, var(--amber) 74%, var(--red) 100%);
   }
   .gforce-marker {
-    position:absolute; left:-3px; right:-3px; height:4px; top:50%; transform: translateY(-50%);
-    background: var(--ink); border-radius:2px; box-shadow: 0 0 6px rgba(0,0,0,.4); opacity:0; transition: opacity .2s;
+    position:absolute; left:-4px; right:-4px; height:6px; top:50%; transform: translateY(-50%);
+    background: var(--ink); border-radius:3px; box-shadow: 0 0 8px 1px rgba(0,0,0,.55), 0 0 4px var(--bg2);
+    opacity:0; transition: opacity .3s, top .12s linear;
   }
-  .gforce-val { position:absolute; bottom:4px; left:0; right:0; text-align:center; font-family: var(--mono); font-size:7px; font-weight:700; color: var(--ink); }
+  .gforce-val {
+    position:absolute; bottom:5px; left:-8px; right:-8px; text-align:center;
+    font-family: var(--mono); font-size:9px; font-weight:700; color: var(--ink);
+    text-shadow: 0 0 4px var(--bg), 0 0 4px var(--bg);
+  }
 
   /* --- riga compatta velocità + punteggio --- */
   .mini-row { display:flex; gap:16px; border-top:1px solid var(--hair); padding-top:6px; flex:0 0 auto; }
   .mini-item { display:flex; flex-direction:column; }
-  .mini-label { font-family: var(--mono); font-size:6.5px; letter-spacing:1px; color: var(--ink-dim); text-transform:uppercase; }
-  .mini-val { font-family: var(--disp); font-size:15px; color: var(--ink); font-weight:700; }
-  .mini-unit { font-size:9px; color: var(--ink-dim); margin-left:2px; font-family: var(--mono); font-weight:400; }
+  .mini-label { font-family: var(--mono); font-size:8px; letter-spacing:1px; color: var(--ink-dim); text-transform:uppercase; }
+  .mini-val { font-family: var(--disp); font-size:20px; color: var(--ink); font-weight:700; }
+  .mini-unit { font-size:11px; color: var(--ink-dim); margin-left:2px; font-family: var(--mono); font-weight:400; }
 
   /* ============ big blind-tappable controls (monocromatici) ============ */
   .btn-big {
@@ -190,7 +195,7 @@
   .btn-big[disabled] { opacity:.5; pointer-events:none; }
 
   .mini-actions-row { display:flex; gap:7px; }
-  .btn-mini { appearance:none; border:1px solid var(--hair); background:transparent; color: var(--ink-dim); border-radius:9px; padding:8px; font-family:'Inter',sans-serif; font-weight:500; font-size:10.5px; display:flex; align-items:center; justify-content:center; gap:4px; flex:1 1 0; cursor:pointer; min-height:38px; }
+  .btn-mini { appearance:none; border:1px solid var(--hair); background:transparent; color: var(--ink-dim); border-radius:9px; padding:7px 3px; font-family:'Inter',sans-serif; font-weight:500; font-size:10px; display:flex; align-items:center; justify-content:center; text-align:center; gap:3px; flex:1 1 0; min-width:0; cursor:pointer; min-height:38px; }
   .btn-mini:disabled { opacity:.4; }
 
   .log-info { font-family: var(--mono); font-size:8.5px; color: var(--muted); text-align:center; min-height:10px; }
@@ -270,6 +275,7 @@
           <button class="btn-big start" id="mainBtn">Avvia</button>
           <button class="btn-big calib" id="calibBtn">Calibra</button>
           <div class="mini-actions-row">
+            <button class="btn-mini" id="resetMaxBtn">↺ Reset max</button>
             <button class="btn-mini" id="settingsBtn">⚙ Impostazioni</button>
             <button class="btn-mini" id="exportBtn" disabled>⭳ CSV</button>
           </div>
@@ -307,7 +313,7 @@
   const pitchMaxUpEl = $('pitchMaxUp'), pitchMaxDownEl = $('pitchMaxDown');
   const speedVal = $('speedVal');
   const gforceVal = $('gforceVal'), gGhost = $('gGhost');
-  const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn');
+  const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn'), resetMaxBtn = $('resetMaxBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
   const permNote = $('permNote');
@@ -409,10 +415,18 @@
     }
   }
 
-  // Beccheggio dal vettore di gravità stimato (gEst) invece che da deviceorientation.beta:
-  // beta è un angolo di Eulero e soffre di gimbal lock/salti oltre ~90° di inclinazione
-  // (es. durante un'impennata, beta può saltare a valori come ~-350°). atan2 su due
-  // componenti del vettore di gravità resta continuo su tutto l'intervallo, senza quel salto.
+  // Beccheggio dal vettore di gravità GREZZO E ISTANTANEO (rx,ry,rz da accelerationIncludingGravity),
+  // MAI dal vettore filtrato gEst: gEst è un filtro passa-basso pensato per stimare la gravità "a
+  // riposo" e sottrarla dall'accelerazione lineare (vedi handleMotion). Durante un'inclinazione
+  // SOSTENUTA (es. impennata tenuta per più di un istante) gEst finisce per "inseguire" la nuova
+  // inclinazione trattandola come nuova gravità di riferimento — il beccheggio calcolato scende
+  // verso 0 anche se il telefono resta inclinato, per poi ripartire da capo se l'inclinazione
+  // continua ad aumentare (bug osservato: sale fino a ~44°, scende a 0, riparte da 1-2-3...).
+  // Usando il vettore grezzo il problema non si presenta: la lettura riflette sempre l'inclinazione
+  // istantanea reale.
+  // atan2 (invece di deviceorientation.beta) resta comunque necessario: beta è un angolo di Eulero e
+  // soffre di gimbal lock/salti oltre ~90° (es. ~-350° durante un'impennata), mentre atan2 su due
+  // componenti del vettore di gravità resta continuo su tutto l'intervallo.
   // Nota: per costruzione (atan2(y, sqrt(...)) con secondo argomento sempre >= 0) l'output è
   // matematicamente limitato all'intervallo (-90°, 90°]: un dispositivo inclinato realmente
   // oltre i 90° leggerà un valore saturato vicino a ±90° invece di continuare oltre — trade-off
@@ -438,6 +452,10 @@
     };
   }
   const gPeak = makePeakHold(1400, 1000);
+  // Valore G smussato (EMA) solo per la barra/testo — separato dal fwdG grezzo usato per il
+  // punteggio, così la lettura visiva è fluida senza cambiare la sensibilità del punteggio guida.
+  let gDisplay = 0;
+  const G_DISPLAY_ALPHA = 0.12;
 
   let recording = false, sensorsActive = false;
   let currentLean = 0, currentPitch = 0;
@@ -466,21 +484,24 @@
 
   function setStatus(live, label){ statusDot.classList.toggle('live', live); statusText.textContent = label; }
 
-  // Positivo = destra (DX) per la piega, su (SU) per il beccheggio — convenzione già
-  // validata su strada per la piega (vedi CLAUDE.md); il beccheggio va confermato.
+  // rollDeg negativo = destra (DX), positivo = sinistra (SX) — verso confermato su strada
+  // (era invertito: rollDeg>=0 veniva letto come DX finché non si è visto che la freccia
+  // puntava dal lato sbagliato; la vecchia sagoma SVG applicava già rotate(${-rollDeg}...)
+  // per lo stesso motivo, correzione persa quando è stata sostituita dal chevron).
   function updateLeanGauge(rollDeg){
     const abs = Math.abs(rollDeg);
+    const isDx = rollDeg < 0;
     leanNumBig.textContent = abs.toFixed(0) + '°';
-    leanChevron.textContent = rollDeg >= 0 ? '▶' : '◀';
-    leanSub.textContent = 'PIEGA · ' + (rollDeg >= 0 ? 'DX' : 'SX');
+    leanChevron.textContent = isDx ? '▶' : '◀';
+    leanSub.textContent = 'PIEGA · ' + (isDx ? 'DX' : 'SX');
 
     leanNumBig.classList.remove('warn','danger');
     leanChevron.classList.remove('warn','danger');
     if (abs > 40) { leanNumBig.classList.add('danger'); leanChevron.classList.add('danger'); }
     else if (abs > 25) { leanNumBig.classList.add('warn'); leanChevron.classList.add('warn'); }
 
-    if (rollDeg >= 0) { if (rollDeg > maxLeanDx) maxLeanDx = rollDeg; }
-    else { if (-rollDeg > maxLeanSx) maxLeanSx = -rollDeg; }
+    if (isDx) { if (abs > maxLeanDx) maxLeanDx = abs; }
+    else { if (abs > maxLeanSx) maxLeanSx = abs; }
     leanMaxDxEl.textContent = maxLeanDx.toFixed(0) + '°';
     leanMaxSxEl.textContent = maxLeanSx.toFixed(0) + '°';
   }
@@ -524,10 +545,10 @@
     } else { lastGammaForRate = currentLean; lastGammaTime = now; }
   }
 
-  function updateGforceGauge(fwdG, now){
-    gforceVal.textContent = (fwdG >= 0 ? '+' : '') + fwdG.toFixed(2) + 'g';
+  function updateGforceGauge(gSmooth, now){
+    gforceVal.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
 
-    const gp = gPeak(fwdG, now);
+    const gp = gPeak(gSmooth, now);
     const pct = clamp(gp.peak / 1.0 * 50, 0, 50);
     gGhost.style.top = (gp.sign >= 0 ? (50 - pct) : (50 + pct)) + '%';
     gGhost.style.opacity = gp.opacity;
@@ -546,7 +567,7 @@
 
     const angle = getScreenAngle();
 
-    lastRawPitch = computePitchFromGravity(gEst.x, gEst.y, gEst.z, angle);
+    lastRawPitch = computePitchFromGravity(rx, ry, rz, angle);
     currentPitch = lastRawPitch - pitchOffset;
     updatePitchGauge(currentPitch);
 
@@ -554,7 +575,8 @@
     linear.x = comp.x; linear.y = comp.y; linear.z = lz;
 
     const fwdG = linear.y / 9.81, latG = linear.x / 9.81, vertG = linear.z / 9.81;
-    updateGforceGauge(fwdG, performance.now());
+    gDisplay += (fwdG - gDisplay) * G_DISPLAY_ALPHA;
+    updateGforceGauge(gDisplay, performance.now());
 
     vertBuf.push(vertG);
     if (vertBuf.length > VERT_BUF_LEN) vertBuf.shift();
@@ -687,16 +709,21 @@
     leanOffset = lastRawRoll;
     if (lastRawAG) {
       gEst.x = lastRawAG.x; gEst.y = lastRawAG.y; gEst.z = lastRawAG.z;
-      // Ricalcola l'offset di beccheggio dal vettore di gravità appena resettato (gEst),
-      // non da lastRawPitch: lastRawPitch riflette lo stato di gEst PRIMA di questo reset,
-      // quindi riusarlo lascerebbe un residuo e il beccheggio non leggerebbe esattamente 0°
-      // subito dopo la calibrazione.
-      pitchOffset = computePitchFromGravity(gEst.x, gEst.y, gEst.z, getScreenAngle());
+      // Offset di beccheggio dal vettore grezzo lastRawAG, non da gEst: il beccheggio (vedi
+      // computePitchFromGravity) è ormai calcolato sempre dal vettore grezzo, mai da gEst.
+      pitchOffset = computePitchFromGravity(lastRawAG.x, lastRawAG.y, lastRawAG.z, getScreenAngle());
     } else {
       pitchOffset = lastRawPitch;
     }
     logInfo.textContent = 'Sensori azzerati ✓';
     setTimeout(() => { if (!recording) logInfo.textContent = ''; }, 1800);
+  });
+
+  resetMaxBtn.addEventListener('click', () => {
+    if (!confirm('Azzerare i valori massimi di piega e beccheggio raggiunti finora?')) return;
+    maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0;
+    leanMaxSxEl.textContent = '--°'; leanMaxDxEl.textContent = '--°';
+    pitchMaxUpEl.textContent = '--°'; pitchMaxDownEl.textContent = '--°';
   });
 
   async function start(){
@@ -713,6 +740,7 @@
     recording = true;
     logData = [];
     maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0;
+    gDisplay = 0;
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
     totalDistanceM = 0; lastLat = null; lastLon = null;
@@ -737,7 +765,11 @@
     logInfo.textContent = logData.length + ' punti pronti.';
   }
 
-  mainBtn.addEventListener('click', () => { if (!recording) start(); else stop(); });
+  mainBtn.addEventListener('click', () => {
+    if (!recording) { start(); return; }
+    if (!confirm('Fermare la registrazione?')) return;
+    stop();
+  });
 
   exportBtn.addEventListener('click', () => {
     if (logData.length === 0) return;
