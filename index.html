@@ -87,8 +87,12 @@
   /* ============ MAP (left, resizable) ============ */
   .col-map {
     flex: 0 0 var(--map-pct); min-width:0; position:relative;
-    border-radius:12px; overflow:hidden; background: var(--panel); border:1px solid var(--panel-edge);
-    box-shadow: 0 0 0 1px rgba(46,142,255,.06) inset, 0 0 22px rgba(46,142,255,.08);
+    border-radius:12px; overflow:hidden; background: var(--bg2);
+  }
+  .col-map::after {
+    content:''; position:absolute; top:0; bottom:0; right:0; width:70px;
+    background: linear-gradient(90deg, transparent, var(--bg) 92%);
+    pointer-events:none; z-index:5;
   }
   #gmap { width:100%; height:100%; background: var(--panel); }
 
@@ -158,36 +162,26 @@
   }
   .gforce-val { position:absolute; bottom:4px; left:0; right:0; text-align:center; font-family: var(--mono); font-size:7px; font-weight:700; color: var(--ink); }
 
-  /* --- compact tiles + score --- */
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; flex:0 0 auto; }
-  .tile { background: var(--panel); border:1px solid var(--panel-edge); border-radius:8px; padding:4px 7px; }
-  .tile-label { font-family: var(--mono); font-size:7px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
-  .tile-val { font-family: var(--mono); font-size:14px; font-weight:600; color: var(--text); }
-  .tile-unit { font-size:8.5px; color: var(--muted); margin-left:2px; }
+  /* --- riga compatta velocità + punteggio --- */
+  .mini-row { display:flex; gap:16px; border-top:1px solid var(--hair); padding-top:6px; flex:0 0 auto; }
+  .mini-item { display:flex; flex-direction:column; }
+  .mini-label { font-family: var(--mono); font-size:6.5px; letter-spacing:1px; color: var(--ink-dim); text-transform:uppercase; }
+  .mini-val { font-family: var(--disp); font-size:15px; color: var(--ink); font-weight:700; }
+  .mini-unit { font-size:9px; color: var(--ink-dim); margin-left:2px; font-family: var(--mono); font-weight:400; }
 
-  .score-card { flex:0 0 auto; background: var(--panel); border:1px solid var(--panel-edge); border-radius:9px; padding:5px 9px; box-shadow: 0 0 0 1px rgba(46,142,255,.04) inset; }
-  .score-top { display:flex; align-items:baseline; justify-content:space-between; }
-  .score-title { font-family: var(--mono); font-size:7.5px; letter-spacing:1px; color: var(--muted); text-transform:uppercase; }
-  .score-num { font-family: var(--disp); font-weight:700; font-size:16px; color: var(--green); }
-  .score-num.mid { color: var(--amber); }
-  .score-num.low { color: var(--red); }
-  .subrow-compact { display:flex; justify-content:space-between; font-family: var(--mono); font-size:7.5px; color: var(--muted); margin-top:2px; }
-  .subrow-compact b { color: var(--text); }
-
-  /* ============ big blind-tappable controls ============ */
+  /* ============ big blind-tappable controls (monocromatici) ============ */
   .btn-big {
     appearance:none; border:none; border-radius:12px; padding:14px; font-family: var(--disp); font-weight:700; font-size:16px; letter-spacing:1px;
     display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; min-height:56px;
     transition: transform .1s, opacity .2s;
   }
   .btn-big:active { transform: scale(0.97); }
-  .btn-big.start { background: linear-gradient(135deg, var(--blue-glow), var(--blue-dim)); color:#041020; box-shadow: 0 0 16px rgba(46,142,255,.45); }
-  .btn-big.stop { background: linear-gradient(135deg, var(--red), #B8221A); color:#1A0303; box-shadow: 0 0 16px rgba(255,68,54,.4); }
-  .btn-big.calib { background: rgba(46,142,255,.1); border:2px solid var(--blue-dim); color: var(--blue-glow); }
+  .btn-big.start, .btn-big.stop { background: var(--ink); color: var(--bg); }
+  .btn-big.calib { background:transparent; border:2px solid var(--hair); color: var(--ink); }
   .btn-big[disabled] { opacity:.5; pointer-events:none; }
 
   .mini-actions-row { display:flex; gap:7px; }
-  .btn-mini { appearance:none; border:1px solid var(--panel-edge); background: var(--panel); color: var(--muted); border-radius:9px; padding:8px; font-family:'Inter',sans-serif; font-weight:500; font-size:10.5px; display:flex; align-items:center; justify-content:center; gap:4px; flex:1 1 0; cursor:pointer; min-height:38px; }
+  .btn-mini { appearance:none; border:1px solid var(--hair); background:transparent; color: var(--ink-dim); border-radius:9px; padding:8px; font-family:'Inter',sans-serif; font-weight:500; font-size:10.5px; display:flex; align-items:center; justify-content:center; gap:4px; flex:1 1 0; cursor:pointer; min-height:38px; }
   .btn-mini:disabled { opacity:.4; }
 
   .log-info { font-family: var(--mono); font-size:8.5px; color: var(--muted); text-align:center; min-height:10px; }
@@ -257,14 +251,9 @@
             </div>
           </div>
 
-          <div class="grid">
-            <div class="tile"><div class="tile-label">Velocità</div><div class="tile-val" id="speedVal">--<span class="tile-unit">km/h</span></div></div>
-            <div class="tile"><div class="tile-label">Vel. max</div><div class="tile-val" id="maxSpeedVal">--<span class="tile-unit">km/h</span></div></div>
-          </div>
-
-          <div class="score-card">
-            <div class="score-top"><div class="score-title">Guida</div><div class="score-num" id="scoreNum">--</div></div>
-            <div class="subrow-compact"><span>Fr/Ac <b id="valAccel">--</b></span><span>Pg <b id="valLean">--</b></span><span>Cp <b id="valComfort">--</b></span></div>
+          <div class="mini-row">
+            <div class="mini-item"><span class="mini-label">Velocità</span><span class="mini-val" id="speedVal">--<span class="mini-unit">km/h</span></span></div>
+            <div class="mini-item"><span class="mini-label">Guida</span><span class="mini-val" id="scoreNum">--</span></div>
           </div>
         </div>
 
@@ -307,14 +296,13 @@
   const leanMaxSxEl = $('leanMaxSx'), leanMaxDxEl = $('leanMaxDx');
   const pitchChevron = $('pitchChevron'), pitchNumBig = $('pitchNumBig'), pitchSub = $('pitchSub');
   const pitchMaxUpEl = $('pitchMaxUp'), pitchMaxDownEl = $('pitchMaxDown');
-  const speedVal = $('speedVal'), maxSpeedVal = $('maxSpeedVal');
+  const speedVal = $('speedVal');
   const gforceVal = $('gforceVal'), gGhost = $('gGhost');
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
   const permNote = $('permNote');
   const scoreNum = $('scoreNum');
-  const valAccel = $('valAccel'), valLean = $('valLean'), valComfort = $('valComfort');
   const distVal = $('distVal'), mapEmpty = $('mapEmpty'), mapArrow = $('mapArrow');
   const colMap = $('colMap'), resizeHandle = $('resizeHandle');
   const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose');
@@ -432,7 +420,7 @@
   let currentLean = 0, currentPitch = 0;
   let lastRawRoll = 0, lastRawPitch = 0;
   let leanOffset = 0, pitchOffset = 0;
-  let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0, maxSpeedKmh = 0;
+  let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0;
   let watchId = null;
   let logData = [];
   let lastLat = null, lastLon = null;
@@ -554,7 +542,6 @@
     scoreNum.textContent = overall.toFixed(0);
     scoreNum.classList.remove('mid','low');
     if (overall < 55) scoreNum.classList.add('low'); else if (overall < 78) scoreNum.classList.add('mid');
-    valAccel.textContent = a.toFixed(0); valLean.textContent = l.toFixed(0); valComfort.textContent = c.toFixed(0);
   }
 
   function zoomForSpeed(kmh){
@@ -606,8 +593,7 @@
 
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
-    speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="tile-unit">km/h</span>';
-    if (kmh !== null && kmh > maxSpeedKmh) { maxSpeedKmh = kmh; maxSpeedVal.innerHTML = maxSpeedKmh.toFixed(0) + '<span class="tile-unit">km/h</span>'; }
+    speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="mini-unit">km/h</span>';
 
     let heading = null;
     if (pos.coords.heading !== null && pos.coords.heading !== undefined && !isNaN(pos.coords.heading) && (kmh === null || kmh > 5)) heading = pos.coords.heading;
@@ -688,12 +674,11 @@
 
     recording = true;
     logData = [];
-    maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0; maxSpeedKmh = 0;
+    maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0;
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
     totalDistanceM = 0; lastLat = null; lastLon = null;
     distVal.textContent = '0.0';
-    maxSpeedVal.innerHTML = '--<span class="tile-unit">km/h</span>';
     setStatus(true, 'REGISTRA');
     permNote.style.display = 'none';
 
