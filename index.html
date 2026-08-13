@@ -6,22 +6,44 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Telemetria Moto — Prova</title>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('moto_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch(e) {}
+})();
+</script>
 <style>
   :root{
     --map-pct: 60%;
-    --bg: #050A14;
-    --panel: #0A1526;
-    --panel-edge: #17283F;
+    --ink: #E8ECF0;
+    --ink-dim: #5C6A7D;
+    --hair: #1C2128;
+    --accent: #8AA0BE;
+    --bg: #0B0D10;
+    --bg2: #0F1216;
     --blue: #2E8EFF;
     --blue-dim: #1C5FB8;
     --blue-glow: #5CC8FF;
     --amber: #FF9A3D;
     --red: #FF4436;
     --green: #35D48A;
-    --text: #E7F0FF;
-    --muted: #5C7699;
+    /* alias legacy: mantengono coerente col tema il resto della UI non toccata in questo piano (mappa, popover) */
+    --panel: var(--bg2);
+    --panel-edge: var(--hair);
+    --text: var(--ink);
+    --muted: var(--ink-dim);
     --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
     --disp: 'Orbitron', 'Bebas Neue', sans-serif;
+  }
+  :root[data-theme="light"]{
+    --ink: #1B2430;
+    --ink-dim: #7A8699;
+    --hair: #DCE2EA;
+    --accent: #3D4C63;
+    --bg: #F4F6F9;
+    --bg2: #FFFFFF;
   }
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
 
@@ -297,6 +319,7 @@
   <div class="popover-backdrop" id="settingsBackdrop"></div>
   <div class="popover-panel" id="settingsPanel">
     <div class="popover-title">IMPOSTAZIONI</div>
+    <div class="settings-row"><span>Tema</span><button class="settings-toggle" id="themeToggle">Notturno</button></div>
     <div class="settings-row"><span>Chiudi</span><button class="settings-toggle" id="settingsClose">OK</button></div>
   </div>
 
@@ -330,6 +353,7 @@
   const distVal = $('distVal'), mapEmpty = $('mapEmpty'), mapArrow = $('mapArrow');
   const colMap = $('colMap'), resizeHandle = $('resizeHandle');
   const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose');
+  const themeToggle = $('themeToggle');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
@@ -356,6 +380,16 @@
   settingsClose.addEventListener('click', closeSettings);
   settingsBackdrop.addEventListener('click', closeSettings);
   function closeSettings(){ settingsPanel.classList.remove('open'); settingsBackdrop.classList.remove('open'); }
+
+  function currentTheme(){ return document.documentElement.getAttribute('data-theme') || 'dark'; }
+  function refreshThemeToggleLabel(){ themeToggle.textContent = currentTheme() === 'dark' ? 'Notturno' : 'Diurno'; }
+  themeToggle.addEventListener('click', () => {
+    const next = currentTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('moto_theme', next); } catch(e){}
+    refreshThemeToggleLabel();
+  });
+  refreshThemeToggleLabel();
 
   /* ---------- navigator popover ---------- */
   function openNav(){ navPanel.classList.add('open'); navBackdrop.classList.add('open'); }
