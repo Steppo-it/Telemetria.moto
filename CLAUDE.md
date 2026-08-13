@@ -38,9 +38,9 @@ Non serve build. Per sviluppare:
 
 La mappa **non funziona** senza una chiave valida. Nel file, in fondo, c'è:
 ```html
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&v=weekly" defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&v=weekly&libraries=places" defer></script>
 ```
-Va sostituito `YOUR_GOOGLE_MAPS_API_KEY` con una chiave reale creata su [Google Cloud Console](https://console.cloud.google.com/), con **Maps JavaScript API** e **Directions API** abilitate sul progetto, **billing attivo** (richiesto anche per restare nel piano gratuito), e idealmente con restrizione **HTTP referrer** limitata al dominio GitHub Pages del progetto (`https://<utente>.github.io/*`) — la chiave finisce in un repo pubblico quindi la restrizione è l'unica vera protezione.
+Va sostituito `YOUR_GOOGLE_MAPS_API_KEY` con una chiave reale creata su [Google Cloud Console](https://console.cloud.google.com/), con **Maps JavaScript API** e **Directions API** abilitate sul progetto, **billing attivo** (richiesto anche per restare nel piano gratuito), e idealmente con restrizione **HTTP referrer** limitata al dominio GitHub Pages del progetto (`https://<utente>.github.io/*`) — la chiave finisce in un repo pubblico quindi la restrizione è l'unica vera protezione. Abilita anche la **Places API** sullo stesso progetto/chiave se vuoi l'autocomplete indirizzi nel navigatore (vedi sotto) — senza, i campi indirizzo degradano a testo libero senza errori.
 
 ## Deploy
 
@@ -123,4 +123,3 @@ timestamp, lat, lon, speed_kmh, heading_deg, lean_deg, pitch_deg, accel_fwd_g, a
 - Salvataggio incrementale della sessione per resilienza a crash/ricarica.
 - Calibrazione assistita con feedback visivo invece di un semplice tap.
 - Modalità mappa offline (la vecchia traccia GPS auto-disegnata, o tile scaricati in anticipo).
-- Autocomplete indirizzi nel navigatore (richiederebbe Places API, chiave aggiuntiva/costi aggiuntivi).
