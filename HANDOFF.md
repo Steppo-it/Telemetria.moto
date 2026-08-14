@@ -54,7 +54,7 @@ La revisione finale sul branch intero (eseguendo davvero il codice unito in un a
 
 ## 4. Problemi noti / aperti
 
-1. **⚠️ Non risolto — errore "questa pagina non riesce a caricare Google Maps"**: segnalato dall'utente dopo aver abilitato la Places API. Causa più probabile: le **restrizioni API sulla chiave** in Google Cloud Console ora includono solo Places API e non più Maps JavaScript API / Directions API (va controllato in Console → Credenziali → la chiave → "Restrizioni API": devono esserci tutte e tre). Seconda causa possibile: fatturazione non attiva sul progetto. **Da verificare con l'utente prima di considerare chiusa la feature navigazione** — senza la mappa funzionante, autocomplete/percorso/glow non sono testabili.
+1. ~~Errore "questa pagina non riesce a caricare Google Maps"~~ **Risolto.** Causa reale (confermata dalla console): `ApiTargetBlockedMapError` sulla **Places API** — non era un problema di mappa/Directions (quelle caricavano già correttamente), solo l'autocomplete indirizzi era bloccato perché la chiave non aveva la Places API tra le API autorizzate. Complicazione: Google distingue **"Places API"** (legacy, quella richiesta dal widget `google.maps.places.Autocomplete` usato nel codice) da **"Places API (New)"** (prodotto diverso, serve un widget diverso — `PlaceAutocompleteElement`) — facile abilitare quella sbagliata. Soluzione: abilitata la **Places API legacy** sul progetto Google Cloud e aggiunta alle restrizioni API della chiave. Confermato funzionante dall'utente (autocomplete, percorso, glow tutti operativi).
 2. **Trip-odometro (`distVal`, il badge "X.X km" sulla mappa) può incrementare durante una sessione di sola navigazione, senza aver premuto Avvia.** Bug reale ma di severità bassa, introdotto dal fix del punto GPS-indipendente sopra: `handlePosition()` non ha un guard `if (recording)` sul blocco che aggiorna l'odometro (solo il logging CSV ce l'ha). Si autocorregge non appena si preme Avvia (l'odometro si azzera). **Nessun impatto sui dati esportati** (CSV resta corretto). Non ancora corretto — decisione presa in sede di revisione: non bloccante, da sistemare quando comodo (basta aggiungere lo stesso guard `if (recording)` già usato per `logData.push`).
 3. **Effetto glow del percorso mai verificato visivamente su un dispositivo reale.** Il codice è corretto (renderer "glow" creato prima di quello nitido, per lo stacking di default di Google Maps), ma nessun agente in questa sessione aveva un browser con mappa funzionante per confermarlo a occhio. Da controllare la prima volta che si vede una mappa reale con un percorso impostato.
 4. **Verso del beccheggio (SU/GIÙ) non validato su strada.** Il calcolo è stato riscritto (vedi punto 2.1) ma il segno esatto va confermato in un'impennata reale. Se risulta invertito, un'unica riga da cambiare in `computePitchFromGravity()` (documentato lì con un commento).
@@ -70,8 +70,7 @@ La revisione finale sul branch intero (eseguendo davvero il codice unito in un a
 
 ## 6. Come continuare
 
-Priorità consigliata:
-1. Risolvere il caricamento di Google Maps (punto 4.1) — blocca la verifica di tutta la feature navigazione.
-2. Una volta che la mappa carica: validare a occhio glow del percorso, leggibilità mappa diurna, posizione del pannello prossima manovra rispetto al logo Google, comportamento del follow-mode/pulsante 📍.
-3. Un giro di guida reale per validare: verso del beccheggio (punto 4.4), soglie di colore piega (25°/40°, mai calibrate su dati reali), e in generale la leggibilità dell'HUD alla luce del sole/in movimento.
-4. Il fix minore del punto 4.2 (odometro durante navigazione), quando comodo.
+Priorità consigliata (aggiornata — Google Maps ora carica correttamente):
+1. Validare a occhio, ora che la mappa funziona: glow del percorso, leggibilità mappa diurna, posizione del pannello prossima manovra rispetto al logo Google, comportamento del follow-mode/pulsante 📍.
+2. Un giro di guida reale per validare: verso del beccheggio (punto 4.4), soglie di colore piega (25°/40°, mai calibrate su dati reali), e in generale la leggibilità dell'HUD alla luce del sole/in movimento.
+3. Il fix minore del punto 4.2 (odometro durante navigazione), quando comodo.
