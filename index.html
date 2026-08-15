@@ -362,6 +362,17 @@
   const gLatNumBig = $('gLatNumBig'), gLatBarFill = $('gLatBarFill'), gLatTopEl = $('gLatTop');
   const gLongNumBig = $('gLongNumBig'), gLongBarFill = $('gLongBarFill'), gLongTopEl = $('gLongTop');
   const miniVal1 = $('miniVal1'), miniVal2 = $('miniVal2');
+  const miniLabel1 = $('miniLabel1'), miniLabel2 = $('miniLabel2');
+  // Spostate qui (erano più in basso nel file) perché il Task 7 chiama refreshMiniTiles()
+  // durante l'inizializzazione a livello top del modulo, prima che l'assegnazione
+  // testuale originaria di queste `let`/`const` venisse eseguita — causava un
+  // ReferenceError per temporal dead zone ad ogni caricamento della pagina.
+  let sessionStartTime = null, sessionIntervalId = null;
+  let lastKmh = null, lastScore = 0;
+  const MINI_METRICS = ['session', 'distance', 'speed', 'score'];
+  const MINI_LABELS = { session: 'Sessione', distance: 'Distanza', speed: 'Velocità', score: 'Punteggio guida' };
+  let miniLayout = { slot1: 'session', slot2: 'distance' };
+  let totalDistanceM = 0;
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn'), resetMaxBtn = $('resetMaxBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
@@ -446,6 +457,23 @@
   });
   loadCardLayout();
   applyCardLayout();
+
+  document.querySelectorAll('.mini-item > .stat-swap-btn[data-mini-slot]').forEach(btn => {
+    const slotKey = btn.getAttribute('data-mini-slot');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const options = MINI_METRICS.map(m => ({ key: m, label: MINI_LABELS[m] }));
+      openPicker('Mostra in questo riquadro', options, (chosen) => {
+        miniLayout[slotKey] = chosen;
+        applyMiniLabels();
+        refreshMiniTiles();
+        saveMiniLayout();
+      });
+    });
+  });
+  loadMiniLayout();
+  applyMiniLabels();
+  refreshMiniTiles();
 
   /* ---------- pannello comandi ---------- */
   controlHandle.addEventListener('click', () => { controlPanel.classList.add('open'); controlBackdrop.classList.add('open'); });
@@ -764,7 +792,6 @@
   const SCORE_ALPHA = 0.03;
   let lastGammaForRate = null, lastGammaTime = null;
 
-  let totalDistanceM = 0;
   let gmap = null, directionsService = null, directionsRenderer = null, directionsRendererGlow = null;
   // true = la mappa segue il GPS (centro + zoom automatici); false = l'utente sta guardando in giro
   // (pan/zoom manuale, o ha appena impostato un percorso) — updateMap() smette di ricentrare finché
@@ -992,9 +1019,6 @@
     return Math.hypot(dLon, dLat);
   }
 
-  let sessionStartTime = null, sessionIntervalId = null;
-  let lastKmh = null, lastScore = 0;
-
   function formatSessionTime(ms){
     const totalS = Math.floor(ms / 1000);
     const mm = Math.floor(totalS / 60).toString().padStart(2, '0');
@@ -1005,11 +1029,25 @@
     miniVal1.textContent = miniTileValueText('slot1');
     miniVal2.textContent = miniTileValueText('slot2');
   }
-  // Task 3: la mini-riga mostra sempre Sessione (posizione 1) e Distanza (posizione 2).
-  // Il Task 7 sostituisce questa funzione con una versione che legge la scelta dell'utente.
-  function miniTileValueText(slotKey){
-    if (slotKey === 'slot1') return sessionStartTime !== null ? formatSessionTime(Date.now() - sessionStartTime) : '00:00';
-    return (totalDistanceM / 1000).toFixed(1) + 'km';
+  function saveMiniLayout(){
+    try { localStorage.setItem('moto_mini_layout', JSON.stringify(miniLayout)); } catch(e){}
+  }
+  function loadMiniLayout(){
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('moto_mini_layout')); } catch(e){}
+    if (saved && MINI_METRICS.includes(saved.slot1) && MINI_METRICS.includes(saved.slot2)) miniLayout = saved;
+  }
+  function miniMetricValueText(metric){
+    if (metric === 'session') return sessionStartTime !== null ? formatSessionTime(Date.now() - sessionStartTime) : '00:00';
+    if (metric === 'distance') return (totalDistanceM / 1000).toFixed(1) + 'km';
+    if (metric === 'speed') return (lastKmh !== null ? lastKmh.toFixed(0) : '--') + 'km/h';
+    if (metric === 'score') return lastScore.toFixed(0);
+    return '--';
+  }
+  function miniTileValueText(slotKey){ return miniMetricValueText(miniLayout[slotKey]); }
+  function applyMiniLabels(){
+    miniLabel1.textContent = MINI_LABELS[miniLayout.slot1];
+    miniLabel2.textContent = MINI_LABELS[miniLayout.slot2];
   }
 
   function handlePosition(pos){
