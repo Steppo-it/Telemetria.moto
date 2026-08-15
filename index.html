@@ -340,12 +340,16 @@
 <script>
 (function(){
   const $ = id => document.getElementById(id);
-  const leanChevron = $('leanChevron'), leanNumBig = $('leanNumBig'), leanSub = $('leanSub');
+  const leanNumBig = $('leanNumBig'), leanSub = $('leanSub'), leanBarFill = $('leanBarFill');
   const leanMaxSxEl = $('leanMaxSx'), leanMaxDxEl = $('leanMaxDx');
-  const pitchChevron = $('pitchChevron'), pitchNumBig = $('pitchNumBig'), pitchSub = $('pitchSub');
+  const pitchNumBig = $('pitchNumBig'), pitchSub = $('pitchSub'), pitchBarFill = $('pitchBarFill');
   const pitchMaxUpEl = $('pitchMaxUp'), pitchMaxDownEl = $('pitchMaxDown');
+  const gLatNumBig = $('gLatNumBig'), gLatBarFill = $('gLatBarFill'), gLatTopEl = $('gLatTop');
+  const gLongNumBig = $('gLongNumBig'), gLongBarFill = $('gLongBarFill'), gLongTopEl = $('gLongTop');
+  // #speedVal appartiene alla vecchia mini-row; l'elemento non esiste più nel markup ma la const
+  // resta (guardata a valle in handlePosition()) perché il Task 3 la ricollega a un nuovo id
+  // mini-tile — rimuoverla ora romperebbe handlePosition() con un ReferenceError.
   const speedVal = $('speedVal');
-  const gforceVal = $('gforceVal'), gGhost = $('gGhost');
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn'), resetMaxBtn = $('resetMaxBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
@@ -645,31 +649,16 @@
     return rad * 180 / Math.PI;
   }
 
-  /* generic short-lived peak-hold-with-decay ("ghost"), used only for G-force */
-  function makePeakHold(holdMs, fadeMs){
-    let peak = 0, sign = 1, peakTime = performance.now();
-    return function(value, now){
-      const abs = Math.abs(value);
-      if (abs >= peak) { peak = abs; sign = value < 0 ? -1 : 1; peakTime = now; }
-      const age = now - peakTime;
-      let opacity;
-      if (age < holdMs) opacity = 1;
-      else if (age < holdMs + fadeMs) opacity = 1 - (age - holdMs) / fadeMs;
-      else { opacity = 0; peak = abs; peakTime = now; sign = value < 0 ? -1 : 1; }
-      return { peak, sign, opacity };
-    };
-  }
-  const gPeak = makePeakHold(1400, 1000);
-  // Valore G smussato (EMA) solo per la barra/testo — separato dal fwdG grezzo usato per il
+  // Valori G smussati (EMA) solo per barra/testo — separati dai grezzi fwdG/latG usati per il
   // punteggio, così la lettura visiva è fluida senza cambiare la sensibilità del punteggio guida.
-  let gDisplay = 0;
+  let gLongDisplay = 0, gLatDisplay = 0;
   const G_DISPLAY_ALPHA = 0.12;
 
   let recording = false, sensorsActive = false;
   let currentLean = 0, currentPitch = 0;
   let lastRawRoll = 0, lastRawPitch = 0;
   let leanOffset = 0, pitchOffset = 0;
-  let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0;
+  let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0, maxGLat = 0, maxGLong = 0;
   let watchId = null;
   function ensureGps(){
     if (watchId !== null) return;
@@ -717,6 +706,14 @@
 
   function setStatus(live, label){ statusDot.classList.toggle('live', live); statusText.textContent = label; }
 
+  // Riempie una barra centrata sullo zero: valore positivo verso destra, negativo verso
+  // sinistra dello 0 grafico, scala fissa ±maxScale. Riusata da tutte e 4 le card.
+  function setBarFill(fillEl, value, maxScale){
+    const pct = clamp(Math.abs(value) / maxScale * 50, 0, 50);
+    if (value >= 0) { fillEl.style.left = '50%'; fillEl.style.width = pct + '%'; }
+    else { fillEl.style.left = (50 - pct) + '%'; fillEl.style.width = pct + '%'; }
+  }
+
   // rollDeg negativo = destra (DX), positivo = sinistra (SX) — verso confermato su strada
   // (era invertito: rollDeg>=0 veniva letto come DX finché non si è visto che la freccia
   // puntava dal lato sbagliato; la vecchia sagoma SVG applicava già rotate(${-rollDeg}...)
@@ -725,15 +722,14 @@
     const abs = Math.abs(rollDeg);
     const isDx = rollDeg < 0;
     leanNumBig.textContent = abs.toFixed(0) + '°';
-    // #leanChevron apparteneva al vecchio badge/chevron, rimosso col layout a tre colonne
-    // (Step 3) — guardia null in attesa che un task futuro gli trovi un posto nella nuova card.
-    if (leanChevron) leanChevron.textContent = isDx ? '▶' : '◀';
-    leanSub.textContent = 'PIEGA · ' + (isDx ? 'DX' : 'SX');
+    leanSub.textContent = isDx ? 'DESTRA' : 'SINISTRA';
+    // barra: positivo = destra (a specchio rispetto al segno di rollDeg, che è negativo per DX)
+    setBarFill(leanBarFill, isDx ? abs : -abs, 60);
 
     leanNumBig.classList.remove('warn','danger');
-    if (leanChevron) leanChevron.classList.remove('warn','danger');
-    if (abs > 40) { leanNumBig.classList.add('danger'); if (leanChevron) leanChevron.classList.add('danger'); }
-    else if (abs > 25) { leanNumBig.classList.add('warn'); if (leanChevron) leanChevron.classList.add('warn'); }
+    leanSub.classList.remove('warn','danger');
+    if (abs > 40) { leanNumBig.classList.add('danger'); leanSub.classList.add('danger'); }
+    else if (abs > 25) { leanNumBig.classList.add('warn'); leanSub.classList.add('warn'); }
 
     if (isDx) { if (abs > maxLeanDx) maxLeanDx = abs; }
     else { if (abs > maxLeanSx) maxLeanSx = abs; }
@@ -744,9 +740,8 @@
   function updatePitchGauge(pitchDeg){
     const abs = Math.abs(pitchDeg);
     pitchNumBig.textContent = abs.toFixed(0) + '°';
-    // #pitchChevron rimosso col layout a tre colonne (Step 3), vedi nota in updateLeanGauge().
-    if (pitchChevron) pitchChevron.textContent = pitchDeg >= 0 ? '▲' : '▼';
-    pitchSub.textContent = 'BECCH. · ' + (pitchDeg >= 0 ? 'SU' : 'GIÙ');
+    pitchSub.textContent = pitchDeg >= 0 ? 'SU' : 'GIÙ';
+    setBarFill(pitchBarFill, pitchDeg, 45);
 
     if (pitchDeg >= 0) { if (pitchDeg > maxPitchUp) maxPitchUp = pitchDeg; }
     else { if (-pitchDeg > maxPitchDown) maxPitchDown = -pitchDeg; }
@@ -781,19 +776,16 @@
     } else { lastGammaForRate = currentLean; lastGammaTime = now; }
   }
 
-  // #gforceVal/#gGhost appartenevano alla vecchia barra G verticale, rimossa col layout a tre
-  // colonne (Step 3) — gPeak() resta chiamato incondizionatamente per non perdere lo stato di
-  // picco, ma le scritture DOM sono guardate finché un task futuro non le ricollega alle nuove
-  // card #cardGLat/#cardGLong.
-  function updateGforceGauge(gSmooth, now){
-    if (gforceVal) gforceVal.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
+  function updateGLatGauge(gSmooth){
+    gLatNumBig.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
+    setBarFill(gLatBarFill, gSmooth, 1.5);
+    if (Math.abs(gSmooth) > maxGLat) { maxGLat = Math.abs(gSmooth); gLatTopEl.textContent = maxGLat.toFixed(2) + 'g'; }
+  }
 
-    const gp = gPeak(gSmooth, now);
-    if (gGhost) {
-      const pct = clamp(gp.peak / 1.0 * 50, 0, 50);
-      gGhost.style.top = (gp.sign >= 0 ? (50 - pct) : (50 + pct)) + '%';
-      gGhost.style.opacity = gp.opacity;
-    }
+  function updateGLongGauge(gSmooth){
+    gLongNumBig.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
+    setBarFill(gLongBarFill, gSmooth, 1.0);
+    if (Math.abs(gSmooth) > maxGLong) { maxGLong = Math.abs(gSmooth); gLongTopEl.textContent = maxGLong.toFixed(2) + 'g'; }
   }
 
   function handleMotion(e){
@@ -817,8 +809,10 @@
     linear.x = comp.x; linear.y = comp.y; linear.z = lz;
 
     const fwdG = linear.y / 9.81, latG = linear.x / 9.81, vertG = linear.z / 9.81;
-    gDisplay += (fwdG - gDisplay) * G_DISPLAY_ALPHA;
-    updateGforceGauge(gDisplay, performance.now());
+    gLongDisplay += (fwdG - gLongDisplay) * G_DISPLAY_ALPHA;
+    gLatDisplay += (latG - gLatDisplay) * G_DISPLAY_ALPHA;
+    updateGLongGauge(gLongDisplay);
+    updateGLatGauge(gLatDisplay);
 
     vertBuf.push(vertG);
     if (vertBuf.length > VERT_BUF_LEN) vertBuf.shift();
@@ -1003,10 +997,11 @@
   });
 
   resetMaxBtn.addEventListener('click', () => {
-    if (!confirm('Azzerare i valori massimi di piega e beccheggio raggiunti finora?')) return;
-    maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0;
+    if (!confirm('Azzerare i valori massimi di piega, beccheggio e G raggiunti finora?')) return;
+    maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0; maxGLat = 0; maxGLong = 0;
     leanMaxSxEl.textContent = '--°'; leanMaxDxEl.textContent = '--°';
     pitchMaxUpEl.textContent = '--°'; pitchMaxDownEl.textContent = '--°';
+    gLatTopEl.textContent = '0.00g'; gLongTopEl.textContent = '0.00g';
   });
 
   async function start(){
@@ -1018,8 +1013,9 @@
 
     recording = true;
     logData = [];
-    maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0;
-    gDisplay = 0;
+    maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0; maxGLat = 0; maxGLong = 0;
+    gLongDisplay = 0; gLatDisplay = 0;
+    gLatTopEl.textContent = '0.00g'; gLongTopEl.textContent = '0.00g';
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
     totalDistanceM = 0; lastLat = null; lastLon = null;
