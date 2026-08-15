@@ -346,15 +346,11 @@
   const pitchMaxUpEl = $('pitchMaxUp'), pitchMaxDownEl = $('pitchMaxDown');
   const gLatNumBig = $('gLatNumBig'), gLatBarFill = $('gLatBarFill'), gLatTopEl = $('gLatTop');
   const gLongNumBig = $('gLongNumBig'), gLongBarFill = $('gLongBarFill'), gLongTopEl = $('gLongTop');
-  // #speedVal appartiene alla vecchia mini-row; l'elemento non esiste più nel markup ma la const
-  // resta (guardata a valle in handlePosition()) perché il Task 3 la ricollega a un nuovo id
-  // mini-tile — rimuoverla ora romperebbe handlePosition() con un ReferenceError.
-  const speedVal = $('speedVal');
+  const miniVal1 = $('miniVal1'), miniVal2 = $('miniVal2');
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn'), resetMaxBtn = $('resetMaxBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
   const permNote = $('permNote');
-  const scoreNum = $('scoreNum');
   const mapEmpty = $('mapEmpty'), mapArrow = $('mapArrow');
   const colMap = $('colMap');
   const slotLeftTop = $('slotLeftTop'), slotLeftBottom = $('slotLeftBottom'), slotRightTop = $('slotRightTop'), slotRightBottom = $('slotRightBottom');
@@ -829,8 +825,8 @@
   }
 
   function renderScore(overall){
-    // #scoreNum apparteneva alla vecchia mini-row, rimossa col layout a tre colonne (Step 3).
-    if (scoreNum) scoreNum.textContent = overall.toFixed(0);
+    lastScore = overall;
+    refreshMiniTiles();
   }
 
   function zoomForSpeed(kmh){
@@ -917,12 +913,29 @@
     return Math.hypot(dLon, dLat);
   }
 
+  let sessionStartTime = null, sessionIntervalId = null;
+  let lastKmh = null, lastScore = 0;
+
+  function formatSessionTime(ms){
+    const totalS = Math.floor(ms / 1000);
+    const mm = Math.floor(totalS / 60).toString().padStart(2, '0');
+    const ss = (totalS % 60).toString().padStart(2, '0');
+    return mm + ':' + ss;
+  }
+  function refreshMiniTiles(){
+    miniVal1.textContent = miniTileValueText('slot1');
+    miniVal2.textContent = miniTileValueText('slot2');
+  }
+  // Task 3: la mini-riga mostra sempre Sessione (posizione 1) e Distanza (posizione 2).
+  // Il Task 7 sostituisce questa funzione con una versione che legge la scelta dell'utente.
+  function miniTileValueText(slotKey){
+    if (slotKey === 'slot1') return sessionStartTime !== null ? formatSessionTime(Date.now() - sessionStartTime) : '00:00';
+    return (totalDistanceM / 1000).toFixed(1) + 'km';
+  }
+
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
-    // #speedVal apparteneva alla vecchia mini-row (velocità/punteggio), rimossa col layout a tre
-    // colonne (Step 3) — mini-row ora mostra di default Sessione/Distanza. Guardia null in
-    // attesa che un task futuro assegni la velocità a uno slot mini-riga.
-    if (speedVal) speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="mini-unit">km/h</span>';
+    lastKmh = kmh;
 
     let heading = null;
     if (pos.coords.heading !== null && pos.coords.heading !== undefined && !isNaN(pos.coords.heading) && (kmh === null || kmh > 5)) heading = pos.coords.heading;
@@ -934,8 +947,7 @@
       if (d > 0.5) totalDistanceM += d;
     }
     lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
-    // #distVal (vecchio map-badge) è stato rimosso col layout a tre colonne; totalDistanceM
-    // resta calcolato qui per un task futuro che lo mostrerà in #miniVal2 ("Distanza").
+    refreshMiniTiles();
 
     updateMap(lastLat, lastLon, kmh, heading);
     updateNavProgress(lastLat, lastLon);
@@ -1019,6 +1031,10 @@
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
     totalDistanceM = 0; lastLat = null; lastLon = null;
+    sessionStartTime = Date.now();
+    if (sessionIntervalId !== null) clearInterval(sessionIntervalId);
+    sessionIntervalId = setInterval(refreshMiniTiles, 1000);
+    refreshMiniTiles();
     setStatus(true, 'REGISTRA');
     permNote.style.display = 'none';
 
@@ -1031,6 +1047,7 @@
 
   function stop(){
     recording = false;
+    if (sessionIntervalId !== null) { clearInterval(sessionIntervalId); sessionIntervalId = null; }
     stopGpsIfIdle();
     setStatus(false, 'FERMO');
     mainBtn.textContent = 'Avvia';
