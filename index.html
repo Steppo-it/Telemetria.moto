@@ -119,23 +119,18 @@
 
   .cockpit-void { flex:0 0 80px; border-radius:9px; pointer-events:none; }
 
-  .control-handle {
-    position:fixed; left:0; top:50%; transform:translateY(-50%); z-index:899;
-    width:22px; height:64px; background: var(--bg2); border:1px solid var(--panel-edge);
-    border-left:none; border-radius:0 10px 10px 0; display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-  }
-  .control-handle .grip { width:4px; height:28px; border-radius:2px; background: var(--ink-dim); }
-
-  /* --- mini-riga personalizzabile (default Sessione/Distanza), solo in fondo alla colonna sx --- */
-  .mini-row { display:flex; gap:6px; flex:0 0 40px; }
+  /* --- riga azioni rapide (Avvio/Pausa + Menù), sempre visibile in fondo alla colonna sx —
+     sostituisce la vecchia linguetta fissa `.control-handle`, non raggiungibile in marcia --- */
+  .mini-row { display:flex; gap:6px; flex:0 0 56px; }
   .mini-item {
     flex:1 1 0; background: var(--bg2); border-radius:8px; display:flex; flex-direction:column;
     align-items:center; justify-content:center; position:relative; min-width:0;
   }
-  .mini-label { font-family: var(--mono); font-size:7.5px; letter-spacing:1px; color: var(--ink-dim); text-transform:uppercase; }
-  .mini-val { font-family: var(--disp); font-size:16px; color: var(--ink); font-weight:700; }
-  .mini-item .stat-swap-btn { top:2px; right:2px; width:26px; height:26px; font-size:11px; }
+  .mini-item.mini-action {
+    appearance:none; border:1px solid var(--hair); margin:0; padding:0; cursor:pointer;
+    font-family: var(--disp); font-weight:700; font-size:14px; letter-spacing:.5px; color: var(--ink);
+  }
+  .mini-item.mini-action:active { transform: scale(0.97); }
 
   /* ============ colonna centrale: barra navigatore + mappa ============ */
   .col-center { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; }
@@ -243,16 +238,8 @@
         <div class="slot" id="slotLeftTop"></div>
         <div class="slot" id="slotLeftBottom"></div>
         <div class="mini-row">
-          <div class="mini-item" id="miniSlot1">
-            <div class="stat-swap-btn" data-mini-slot="slot1">⇄</div>
-            <span class="mini-label" id="miniLabel1">Sessione</span>
-            <span class="mini-val" id="miniVal1">00:00</span>
-          </div>
-          <div class="mini-item" id="miniSlot2">
-            <div class="stat-swap-btn" data-mini-slot="slot2">⇄</div>
-            <span class="mini-label" id="miniLabel2">Distanza</span>
-            <span class="mini-val" id="miniVal2">0.0km</span>
-          </div>
+          <button class="mini-item mini-action" id="miniMainBtn" type="button">Avvio</button>
+          <button class="mini-item mini-action" id="miniMenuBtn" type="button">Menù</button>
         </div>
       </div>
 
@@ -314,7 +301,6 @@
       <div class="stat-maxrow"><span>TOP <b id="gLongTop">0.00g</b></span></div>
     </div>
 
-    <div class="control-handle" id="controlHandle"><div class="grip"></div></div>
     <div class="popover-backdrop" id="controlBackdrop"></div>
     <div class="popover-panel" id="controlPanel">
       <div class="popover-title">COMANDI</div>
@@ -362,22 +348,8 @@
   const pitchMaxUpEl = $('pitchMaxUp'), pitchMaxDownEl = $('pitchMaxDown');
   const gLatNumBig = $('gLatNumBig'), gLatBarFill = $('gLatBarFill'), gLatTopEl = $('gLatTop');
   const gLongNumBig = $('gLongNumBig'), gLongBarFill = $('gLongBarFill'), gLongTopEl = $('gLongTop');
-  const miniVal1 = $('miniVal1'), miniVal2 = $('miniVal2');
-  const miniLabel1 = $('miniLabel1'), miniLabel2 = $('miniLabel2');
-  // Spostate qui (erano più in basso nel file) perché il Task 7 chiama refreshMiniTiles()
-  // durante l'inizializzazione a livello top del modulo, prima che l'assegnazione
-  // testuale originaria di queste `let`/`const` venisse eseguita — causava un
-  // ReferenceError per temporal dead zone ad ogni caricamento della pagina.
-  // `recording` è stata aggiunta qui per lo stesso motivo: miniMetricValueText('session')
-  // (fix del blocco del timer su Ferma) la legge, ed è raggiunta dalla stessa chiamata
-  // top-level a refreshMiniTiles() più sotto.
-  let sessionStartTime = null, sessionIntervalId = null, sessionFrozenMs = null;
+  const miniMainBtn = $('miniMainBtn'), miniMenuBtn = $('miniMenuBtn');
   let recording = false;
-  let lastKmh = null, lastScore = 0;
-  const MINI_METRICS = ['session', 'distance', 'speed', 'score'];
-  const MINI_LABELS = { session: 'Sessione', distance: 'Distanza', speed: 'Velocità', score: 'Punteggio guida' };
-  let miniLayout = { slot1: 'session', slot2: 'distance' };
-  let totalDistanceM = 0;
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn'), resetMaxBtn = $('resetMaxBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
   const logInfo = $('logInfo');
@@ -386,7 +358,7 @@
   const colMap = $('colMap');
   const slotLeftTop = $('slotLeftTop'), slotLeftBottom = $('slotLeftBottom'), slotRightTop = $('slotRightTop'), slotRightBottom = $('slotRightBottom');
   const cardLean = $('cardLean'), cardPitch = $('cardPitch'), cardGLat = $('cardGLat'), cardGLong = $('cardGLong');
-  const controlHandle = $('controlHandle'), controlPanel = $('controlPanel'), controlBackdrop = $('controlBackdrop'), controlClose = $('controlClose');
+  const controlPanel = $('controlPanel'), controlBackdrop = $('controlBackdrop'), controlClose = $('controlClose');
   const themeToggle = $('themeToggle'), editModeToggle = $('editModeToggle');
   const appEl = document.querySelector('.app');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
@@ -463,25 +435,8 @@
   loadCardLayout();
   applyCardLayout();
 
-  document.querySelectorAll('.mini-item > .stat-swap-btn[data-mini-slot]').forEach(btn => {
-    const slotKey = btn.getAttribute('data-mini-slot');
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const options = MINI_METRICS.map(m => ({ key: m, label: MINI_LABELS[m] }));
-      openPicker('Mostra in questo riquadro', options, (chosen) => {
-        miniLayout[slotKey] = chosen;
-        applyMiniLabels();
-        refreshMiniTiles();
-        saveMiniLayout();
-      });
-    });
-  });
-  loadMiniLayout();
-  applyMiniLabels();
-  refreshMiniTiles();
-
   /* ---------- pannello comandi ---------- */
-  controlHandle.addEventListener('click', () => { controlPanel.classList.add('open'); controlBackdrop.classList.add('open'); });
+  miniMenuBtn.addEventListener('click', () => { controlPanel.classList.add('open'); controlBackdrop.classList.add('open'); });
   controlClose.addEventListener('click', closeControlPanel);
   controlBackdrop.addEventListener('click', closeControlPanel);
   function closeControlPanel(){ controlPanel.classList.remove('open'); controlBackdrop.classList.remove('open'); }
@@ -930,14 +885,8 @@
     subAccel += (accelTarget - subAccel) * SCORE_ALPHA;
     subComfort += (comfortIdx - subComfort) * SCORE_ALPHA;
     const overall = subAccel * 0.40 + subLean * 0.35 + subComfort * 0.25;
-    renderScore(overall);
 
     if (recording) window.__latestTelemetry = { pitch: currentPitch, fwdG, latG, vertG, comfortIdx, score: overall };
-  }
-
-  function renderScore(overall){
-    lastScore = overall;
-    refreshMiniTiles();
   }
 
   function zoomForSpeed(kmh){
@@ -1024,56 +973,15 @@
     return Math.hypot(dLon, dLat);
   }
 
-  function formatSessionTime(ms){
-    const totalS = Math.floor(ms / 1000);
-    const mm = Math.floor(totalS / 60).toString().padStart(2, '0');
-    const ss = (totalS % 60).toString().padStart(2, '0');
-    return mm + ':' + ss;
-  }
-  function refreshMiniTiles(){
-    miniVal1.textContent = miniTileValueText('slot1');
-    miniVal2.textContent = miniTileValueText('slot2');
-  }
-  function saveMiniLayout(){
-    try { localStorage.setItem('moto_mini_layout', JSON.stringify(miniLayout)); } catch(e){}
-  }
-  function loadMiniLayout(){
-    let saved = null;
-    try { saved = JSON.parse(localStorage.getItem('moto_mini_layout')); } catch(e){}
-    if (saved && MINI_METRICS.includes(saved.slot1) && MINI_METRICS.includes(saved.slot2)) miniLayout = saved;
-  }
-  function miniMetricValueText(metric){
-    if (metric === 'session') {
-      if (recording && sessionStartTime !== null) return formatSessionTime(Date.now() - sessionStartTime);
-      if (sessionFrozenMs !== null) return formatSessionTime(sessionFrozenMs);
-      return '00:00';
-    }
-    if (metric === 'distance') return (totalDistanceM / 1000).toFixed(1) + 'km';
-    if (metric === 'speed') return (lastKmh !== null ? lastKmh.toFixed(0) : '--') + 'km/h';
-    if (metric === 'score') return lastScore.toFixed(0);
-    return '--';
-  }
-  function miniTileValueText(slotKey){ return miniMetricValueText(miniLayout[slotKey]); }
-  function applyMiniLabels(){
-    miniLabel1.textContent = MINI_LABELS[miniLayout.slot1];
-    miniLabel2.textContent = MINI_LABELS[miniLayout.slot2];
-  }
-
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
-    lastKmh = kmh;
 
     let heading = null;
     if (pos.coords.heading !== null && pos.coords.heading !== undefined && !isNaN(pos.coords.heading) && (kmh === null || kmh > 5)) heading = pos.coords.heading;
     else if (compassHeading !== null) heading = compassHeading;
     else heading = lastHeading;
 
-    if (lastLat !== null && lastLon !== null) {
-      const d = distanceMeters(lastLat, lastLon, pos.coords.latitude, pos.coords.longitude);
-      if (d > 0.5) totalDistanceM += d;
-    }
     lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
-    refreshMiniTiles();
 
     updateMap(lastLat, lastLon, kmh, heading);
     updateNavProgress(lastLat, lastLon);
@@ -1144,8 +1052,13 @@
 
   async function start(){
     mainBtn.disabled = true; mainBtn.textContent = '…';
+    miniMainBtn.disabled = true; miniMainBtn.textContent = '…';
     const ok = await ensureSensors();
-    if (!ok) { mainBtn.disabled = false; mainBtn.textContent = 'Riprova'; return; }
+    if (!ok) {
+      mainBtn.disabled = false; mainBtn.textContent = 'Riprova';
+      miniMainBtn.disabled = false; miniMainBtn.textContent = 'Riprova';
+      return;
+    }
 
     ensureGps();
 
@@ -1156,39 +1069,37 @@
     gLatTopEl.textContent = '0.00g'; gLongTopEl.textContent = '0.00g';
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
-    totalDistanceM = 0; lastLat = null; lastLon = null;
-    sessionStartTime = Date.now();
-    sessionFrozenMs = null;
-    if (sessionIntervalId !== null) clearInterval(sessionIntervalId);
-    sessionIntervalId = setInterval(refreshMiniTiles, 1000);
-    refreshMiniTiles();
+    lastLat = null; lastLon = null;
     setStatus(true, 'REGISTRA');
     permNote.style.display = 'none';
 
     mainBtn.textContent = 'Ferma';
     mainBtn.classList.remove('start'); mainBtn.classList.add('stop');
     mainBtn.disabled = false;
+    miniMainBtn.textContent = 'Pausa';
+    miniMainBtn.disabled = false;
     exportBtn.disabled = true;
     logInfo.textContent = '';
   }
 
   function stop(){
     recording = false;
-    if (sessionStartTime !== null) sessionFrozenMs = Date.now() - sessionStartTime;
-    if (sessionIntervalId !== null) { clearInterval(sessionIntervalId); sessionIntervalId = null; }
     stopGpsIfIdle();
     setStatus(false, 'FERMO');
     mainBtn.textContent = 'Avvia';
     mainBtn.classList.remove('stop'); mainBtn.classList.add('start');
+    miniMainBtn.textContent = 'Avvio';
     exportBtn.disabled = logData.length === 0;
     logInfo.textContent = logData.length + ' punti pronti.';
   }
 
-  mainBtn.addEventListener('click', () => {
+  function handleStartStopClick(){
     if (!recording) { start(); return; }
     if (!confirm('Fermare la registrazione?')) return;
     stop();
-  });
+  }
+  mainBtn.addEventListener('click', handleStartStopClick);
+  miniMainBtn.addEventListener('click', handleStartStopClick);
 
   exportBtn.addEventListener('click', () => {
     if (logData.length === 0) return;
