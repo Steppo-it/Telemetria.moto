@@ -345,6 +345,13 @@
     <div class="log-info" id="navInfo"></div>
   </div>
 
+  <div class="popover-backdrop" id="pickerBackdrop"></div>
+  <div class="popover-panel" id="pickerPanel">
+    <div class="popover-title" id="pickerTitle">SCEGLI</div>
+    <div id="pickerList" style="display:flex; flex-direction:column; gap:7px;"></div>
+    <div class="settings-row"><span>Annulla</span><button class="settings-toggle" id="pickerClose">OK</button></div>
+  </div>
+
 <script>
 (function(){
   const $ = id => document.getElementById(id);
@@ -375,6 +382,26 @@
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
   const root = document.documentElement;
 
+  /* ---------- picker generico (riusato per scambio card grandi e scelta mini-tile) ---------- */
+  const pickerBackdrop = $('pickerBackdrop'), pickerPanel = $('pickerPanel'), pickerTitle = $('pickerTitle'), pickerList = $('pickerList'), pickerClose = $('pickerClose');
+  function openPicker(title, options, onPick){
+    pickerTitle.textContent = title;
+    pickerList.innerHTML = '';
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-mini';
+      btn.style.width = '100%';
+      btn.textContent = opt.label;
+      btn.addEventListener('click', () => { onPick(opt.key); closePicker(); });
+      pickerList.appendChild(btn);
+    });
+    pickerPanel.classList.add('open');
+    pickerBackdrop.classList.add('open');
+  }
+  function closePicker(){ pickerPanel.classList.remove('open'); pickerBackdrop.classList.remove('open'); }
+  pickerClose.addEventListener('click', closePicker);
+  pickerBackdrop.addEventListener('click', closePicker);
+
   /* ---------- assegnazione card grandi agli slot (default; lo scambio arriva nel Task 6) ---------- */
   const CARD_METRICS = ['lean', 'pitch', 'gLat', 'gLong'];
   const CARD_EL = { lean: cardLean, pitch: cardPitch, gLat: cardGLat, gLong: cardGLong };
@@ -384,6 +411,40 @@
   function applyCardLayout(){
     SLOT_KEYS.forEach(slotKey => { SLOT_EL[slotKey].appendChild(CARD_EL[cardLayout[slotKey]]); });
   }
+  function saveCardLayout(){
+    try { localStorage.setItem('moto_card_layout', JSON.stringify(cardLayout)); } catch(e){}
+  }
+  function loadCardLayout(){
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('moto_card_layout')); } catch(e){}
+    // valida: deve avere esattamente le 4 chiavi slot, ognuna con uno dei 4 metric, tutti distinti
+    if (saved && SLOT_KEYS.every(k => CARD_METRICS.includes(saved[k]))
+        && new Set(SLOT_KEYS.map(k => saved[k])).size === 4) {
+      cardLayout = saved;
+    }
+  }
+  function findSlotForMetric(metric){ return SLOT_KEYS.find(k => cardLayout[k] === metric); }
+  function swapCardInto(slotKey, newMetric){
+    const oldMetric = cardLayout[slotKey];
+    if (oldMetric === newMetric) return;
+    const otherSlotKey = findSlotForMetric(newMetric);
+    cardLayout[slotKey] = newMetric;
+    cardLayout[otherSlotKey] = oldMetric;
+    applyCardLayout();
+    saveCardLayout();
+  }
+  const CARD_LABELS = { lean: 'Piega', pitch: 'Beccheggio', gLat: 'G Laterale', gLong: 'G Longitudinale' };
+  document.querySelectorAll('.stat-card > .stat-swap-btn[data-metric]').forEach(btn => {
+    const metric = btn.getAttribute('data-metric');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const options = CARD_METRICS.filter(m => m !== metric).map(m => ({ key: m, label: CARD_LABELS[m] }));
+      openPicker('Scambia "' + CARD_LABELS[metric] + '" con', options, (chosen) => {
+        swapCardInto(findSlotForMetric(metric), chosen);
+      });
+    });
+  });
+  loadCardLayout();
   applyCardLayout();
 
   /* ---------- pannello comandi ---------- */
