@@ -118,6 +118,14 @@
 
   .cockpit-void { flex:0 0 80px; border-radius:9px; pointer-events:none; }
 
+  .control-handle {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:899;
+    width:64px; height:22px; background: var(--bg2); border:1px solid var(--panel-edge);
+    border-bottom:none; border-radius:10px 10px 0 0; display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .control-handle .grip { width:28px; height:4px; border-radius:2px; background: var(--ink-dim); }
+
   /* --- mini-riga personalizzabile (default Sessione/Distanza), solo in fondo alla colonna sx --- */
   .mini-row { display:flex; gap:6px; flex:0 0 40px; }
   .mini-item {
@@ -305,21 +313,22 @@
       <div class="stat-maxrow"><span>TOP <b id="gLongTop">0.00g</b></span></div>
     </div>
 
-    <div class="hud-bottom-placeholder" style="display:none">
+    <div class="control-handle" id="controlHandle"><div class="grip"></div></div>
+    <div class="popover-backdrop" id="controlBackdrop"></div>
+    <div class="popover-panel" id="controlPanel">
+      <div class="popover-title">COMANDI</div>
       <button class="btn-big start" id="mainBtn">Avvia</button>
       <button class="btn-big calib" id="calibBtn">Calibra</button>
-      <button class="btn-mini" id="resetMaxBtn">↺ Reset max</button>
-      <button class="btn-mini" id="settingsBtn">⚙ Impostazioni</button>
-      <button class="btn-mini" id="exportBtn" disabled>⭳ CSV</button>
+      <div class="mini-actions-row" style="margin-top:7px">
+        <button class="btn-mini" id="resetMaxBtn">↺ Reset max</button>
+        <button class="btn-mini" id="exportBtn" disabled>⭳ CSV</button>
+      </div>
       <div class="log-info" id="logInfo"></div>
+      <div class="settings-row"><span>Tema</span><button class="settings-toggle" id="themeToggle">Notturno</button></div>
+      <div class="settings-row"><span>Voce navigatore</span><button class="settings-toggle" id="voiceToggle">Attiva</button></div>
+      <div class="settings-row"><span>Modalità modifica</span><button class="settings-toggle" id="editModeToggle">Disattiva</button></div>
+      <div class="settings-row"><span>Chiudi</span><button class="settings-toggle" id="controlClose">OK</button></div>
     </div>
-  </div>
-
-  <div class="popover-backdrop" id="settingsBackdrop"></div>
-  <div class="popover-panel" id="settingsPanel">
-    <div class="popover-title">IMPOSTAZIONI</div>
-    <div class="settings-row"><span>Tema</span><button class="settings-toggle" id="themeToggle">Notturno</button></div>
-    <div class="settings-row"><span>Chiudi</span><button class="settings-toggle" id="settingsClose">OK</button></div>
   </div>
 
   <div class="popover-backdrop" id="navBackdrop"></div>
@@ -328,7 +337,6 @@
     <div id="waypointList"></div>
     <button class="btn-mini" id="addWaypointBtn" type="button">+ Aggiungi tappa</button>
     <input type="text" id="destInput" class="settings-input" placeholder="Indirizzo o luogo di destinazione..." />
-    <div class="settings-row"><span>Voce</span><button class="settings-toggle" id="voiceToggle">Attiva</button></div>
     <div class="mini-actions-row">
       <button class="btn-mini" id="navGoBtn">Vai</button>
       <button class="btn-mini" id="navClearBtn">Annulla percorso</button>
@@ -355,8 +363,9 @@
   const colMap = $('colMap');
   const slotLeftTop = $('slotLeftTop'), slotLeftBottom = $('slotLeftBottom'), slotRightTop = $('slotRightTop'), slotRightBottom = $('slotRightBottom');
   const cardLean = $('cardLean'), cardPitch = $('cardPitch'), cardGLat = $('cardGLat'), cardGLong = $('cardGLong');
-  const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose');
-  const themeToggle = $('themeToggle');
+  const controlHandle = $('controlHandle'), controlPanel = $('controlPanel'), controlBackdrop = $('controlBackdrop'), controlClose = $('controlClose');
+  const themeToggle = $('themeToggle'), editModeToggle = $('editModeToggle');
+  const appEl = document.querySelector('.app');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
   const mapRecenterBtn = $('mapRecenterBtn');
   const waypointList = $('waypointList'), addWaypointBtn = $('addWaypointBtn');
@@ -377,11 +386,20 @@
   }
   applyCardLayout();
 
-  /* ---------- settings popover ---------- */
-  settingsBtn.addEventListener('click', () => { settingsPanel.classList.add('open'); settingsBackdrop.classList.add('open'); });
-  settingsClose.addEventListener('click', closeSettings);
-  settingsBackdrop.addEventListener('click', closeSettings);
-  function closeSettings(){ settingsPanel.classList.remove('open'); settingsBackdrop.classList.remove('open'); }
+  /* ---------- pannello comandi ---------- */
+  controlHandle.addEventListener('click', () => { controlPanel.classList.add('open'); controlBackdrop.classList.add('open'); });
+  controlClose.addEventListener('click', closeControlPanel);
+  controlBackdrop.addEventListener('click', closeControlPanel);
+  function closeControlPanel(){ controlPanel.classList.remove('open'); controlBackdrop.classList.remove('open'); }
+
+  let editMode = false;
+  function refreshEditModeLabel(){ editModeToggle.textContent = editMode ? 'Attiva' : 'Disattiva'; }
+  editModeToggle.addEventListener('click', () => {
+    editMode = !editMode;
+    appEl.classList.toggle('edit-mode', editMode);
+    refreshEditModeLabel();
+  });
+  refreshEditModeLabel();
 
   function currentTheme(){ return document.documentElement.getAttribute('data-theme') || 'dark'; }
   function refreshThemeToggleLabel(){ themeToggle.textContent = currentTheme() === 'dark' ? 'Notturno' : 'Diurno'; }
