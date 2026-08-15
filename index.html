@@ -367,7 +367,11 @@
   // durante l'inizializzazione a livello top del modulo, prima che l'assegnazione
   // testuale originaria di queste `let`/`const` venisse eseguita — causava un
   // ReferenceError per temporal dead zone ad ogni caricamento della pagina.
-  let sessionStartTime = null, sessionIntervalId = null;
+  // `recording` è stata aggiunta qui per lo stesso motivo: miniMetricValueText('session')
+  // (fix del blocco del timer su Ferma) la legge, ed è raggiunta dalla stessa chiamata
+  // top-level a refreshMiniTiles() più sotto.
+  let sessionStartTime = null, sessionIntervalId = null, sessionFrozenMs = null;
+  let recording = false;
   let lastKmh = null, lastScore = 0;
   const MINI_METRICS = ['session', 'distance', 'speed', 'score'];
   const MINI_LABELS = { session: 'Sessione', distance: 'Distanza', speed: 'Velocità', score: 'Punteggio guida' };
@@ -757,7 +761,7 @@
   let gLongDisplay = 0, gLatDisplay = 0;
   const G_DISPLAY_ALPHA = 0.12;
 
-  let recording = false, sensorsActive = false;
+  let sensorsActive = false;
   let currentLean = 0, currentPitch = 0;
   let lastRawRoll = 0, lastRawPitch = 0;
   let leanOffset = 0, pitchOffset = 0;
@@ -1038,7 +1042,11 @@
     if (saved && MINI_METRICS.includes(saved.slot1) && MINI_METRICS.includes(saved.slot2)) miniLayout = saved;
   }
   function miniMetricValueText(metric){
-    if (metric === 'session') return sessionStartTime !== null ? formatSessionTime(Date.now() - sessionStartTime) : '00:00';
+    if (metric === 'session') {
+      if (recording && sessionStartTime !== null) return formatSessionTime(Date.now() - sessionStartTime);
+      if (sessionFrozenMs !== null) return formatSessionTime(sessionFrozenMs);
+      return '00:00';
+    }
     if (metric === 'distance') return (totalDistanceM / 1000).toFixed(1) + 'km';
     if (metric === 'speed') return (lastKmh !== null ? lastKmh.toFixed(0) : '--') + 'km/h';
     if (metric === 'score') return lastScore.toFixed(0);
@@ -1149,6 +1157,7 @@
     subAccel = 100; subLean = 100; subComfort = 100;
     totalDistanceM = 0; lastLat = null; lastLon = null;
     sessionStartTime = Date.now();
+    sessionFrozenMs = null;
     if (sessionIntervalId !== null) clearInterval(sessionIntervalId);
     sessionIntervalId = setInterval(refreshMiniTiles, 1000);
     refreshMiniTiles();
@@ -1164,6 +1173,7 @@
 
   function stop(){
     recording = false;
+    if (sessionStartTime !== null) sessionFrozenMs = Date.now() - sessionStartTime;
     if (sessionIntervalId !== null) { clearInterval(sessionIntervalId); sessionIntervalId = null; }
     stopGpsIfIdle();
     setStatus(false, 'FERMO');
