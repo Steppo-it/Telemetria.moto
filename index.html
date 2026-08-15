@@ -361,8 +361,7 @@
   const mapRecenterBtn = $('mapRecenterBtn');
   const waypointList = $('waypointList'), addWaypointBtn = $('addWaypointBtn');
   const voiceToggle = $('voiceToggle');
-  const navPanelEl = $('navPanelEl'), navPanelChevron = $('navPanelChevron'), navPanelText = $('navPanelText'), navPanelDist = $('navPanelDist');
-  const routeInfoEl = $('routeInfoEl');
+  const navTopbar = $('navTopbar'), navTopbarChevron = $('navTopbarChevron'), navTopbarText = $('navTopbarText'), navTopbarDist = $('navTopbarDist'), navTopbarEta = $('navTopbarEta');
 
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
   const root = document.documentElement;
@@ -435,12 +434,7 @@
     navStepIndex = 0;
     navAnnounced = false;
     navActive = true;
-    // #navPanelEl/#routeInfoEl/#navPanelChevron/#navPanelText/#navPanelDist appartenevano al
-    // vecchio overlay di navigazione sulla mappa, rimosso col layout a tre colonne (Step 3) —
-    // un task futuro consoliderà questi contenuti nel nuovo #navTopbar. Guardie null qui sotto
-    // per non interrompere lo stato di navigazione (navActive/navSteps) né la sintesi vocale.
-    if (navPanelEl) navPanelEl.classList.add('show');
-    if (routeInfoEl) routeInfoEl.classList.add('show');
+    navTopbar.classList.remove('idle');
     updateNavPanel();
     updateRouteInfo();
   }
@@ -449,30 +443,36 @@
     navActive = false;
     navSteps = [];
     navStepIndex = 0;
-    if (navPanelEl) navPanelEl.classList.remove('show');
-    if (routeInfoEl) routeInfoEl.classList.remove('show');
+    navTopbar.classList.add('idle');
+    navTopbarText.textContent = 'Nessun percorso impostato';
+    navTopbarChevron.textContent = '–';
+    navTopbarDist.textContent = '';
+    navTopbarEta.textContent = '';
     stopGpsIfIdle();
   }
 
   function updateNavPanel(){
     if (!navActive || navStepIndex >= navSteps.length) return;
     const step = navSteps[navStepIndex];
-    if (navPanelChevron) navPanelChevron.textContent = chevronForManeuver(step.maneuver);
-    if (navPanelText) navPanelText.textContent = step.instructionText;
+    navTopbarChevron.textContent = chevronForManeuver(step.maneuver);
+    navTopbarText.innerHTML = '<b>' + step.instructionText + '</b>';
   }
 
   function updateRouteInfo(){
     if (!navActive) return;
     let remM = 0, remS = 0;
     for (let i = navStepIndex; i < navSteps.length; i++) { remM += navSteps[i].distanceM; remS += navSteps[i].durationS; }
-    if (routeInfoEl) routeInfoEl.textContent = (remM / 1000).toFixed(1) + ' km · ' + Math.round(remS / 60) + ' min';
+    navTopbarDist.textContent = (remM / 1000).toFixed(1) + ' km';
+    const etaDate = new Date(Date.now() + remS * 1000);
+    navTopbarEta.textContent = 'ETA ' + etaDate.getHours().toString().padStart(2,'0') + ':' + etaDate.getMinutes().toString().padStart(2,'0');
   }
 
   function updateNavProgress(lat, lon){
     if (!navActive || navStepIndex >= navSteps.length) return;
     const step = navSteps[navStepIndex];
     const dist = distanceMeters(lat, lon, step.endLat, step.endLon);
-    if (navPanelDist) navPanelDist.textContent = dist >= 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m';
+    const distText = dist >= 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m';
+    navTopbarText.innerHTML = 'Tra <b>' + distText + '</b> · ' + step.instructionText;
 
     if (!navAnnounced && dist < 150) {
       speak(step.instructionText);
@@ -484,8 +484,8 @@
       navAnnounced = false;
       if (navStepIndex >= navSteps.length) {
         speak('Sei arrivato a destinazione.');
-        if (navPanelText) navPanelText.textContent = 'Arrivato';
-        if (navPanelDist) navPanelDist.textContent = '';
+        navTopbarText.textContent = 'Arrivato a destinazione';
+        navTopbarDist.textContent = ''; navTopbarEta.textContent = '';
         updateRouteInfo();
         return;
       }
