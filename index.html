@@ -85,21 +85,53 @@
   .perm-note { font-size:8.5px; color: var(--muted); line-height:1.3; background: var(--panel); border:1px solid var(--panel-edge); border-radius:6px; padding:4px 8px; margin-bottom:4px; flex:0 0 auto; }
   .perm-note b { color: var(--ink); }
 
-  .layout { display:flex; flex-direction:row; gap:0; flex:1 1 auto; min-height:0; }
+  .layout { display:flex; flex-direction:row; gap:6px; flex:1 1 auto; min-height:0; }
 
-  /* ============ MAP (left, resizable) ============ */
-  .col-map {
-    flex: 0 0 var(--map-pct); min-width:0; position:relative;
-    border-radius:0; overflow:hidden; background: var(--bg2);
+  /* ============ colonne laterali (piega+Glat a sx, beccheggio+Glong a dx) ============ */
+  .col-side { flex:0 0 168px; display:flex; flex-direction:column; gap:6px; min-height:0; }
+
+  .stat-card {
+    flex:1 1 0; min-height:0; background: var(--bg2); border-radius:9px; padding:8px 10px;
+    display:flex; flex-direction:column; justify-content:center; position:relative;
   }
-  .col-map::after {
-    /* bottom:22px (invece di 0) lascia libero l'angolo in basso a destra della mappa, dove
-       Google Maps disegna la striscia di attribuzione ("Map data © / Termini / Segnala un
-       errore") — deve restare sempre completamente visibile e non velata dalla dissolvenza. */
-    content:''; position:absolute; top:0; bottom:22px; right:0; width:70px;
-    background: linear-gradient(90deg, transparent, var(--bg) 92%);
-    pointer-events:none; z-index:5;
+  .stat-card-label { font-family: var(--mono); font-size:9px; letter-spacing:1.3px; color: var(--ink-dim); text-transform:uppercase; }
+  .stat-card-num { font-family: var(--disp); font-weight:800; line-height:1; color: var(--ink); letter-spacing:.5px; font-size: clamp(30px, 8.5vh, 52px); margin:3px 0; }
+  .stat-card-num.warn { color: var(--amber); }
+  .stat-card-num.danger { color: var(--red); }
+  .stat-card-sub { font-family: var(--mono); font-size:10px; letter-spacing:1px; color: var(--accent); margin-bottom:4px; }
+  .stat-card-sub.warn { color: var(--amber); }
+  .stat-card-sub.danger { color: var(--red); }
+
+  .stat-bar-track { position:relative; height:8px; border-radius:4px; background: var(--hair); margin:2px 0 3px; }
+  .stat-bar-fill { position:absolute; top:0; bottom:0; border-radius:4px; background: var(--blue-glow); }
+  .stat-bar-ticks { display:flex; justify-content:space-between; font-family: var(--mono); font-size:8px; color: var(--ink-dim); }
+
+  .stat-maxrow { display:flex; justify-content:space-between; font-family: var(--mono); font-size:9px; color: var(--ink-dim); margin-top:5px; }
+  .stat-maxrow b { color: var(--ink); font-weight:700; }
+
+  .stat-swap-btn {
+    position:absolute; top:4px; right:4px; width:30px; height:30px; border-radius:7px;
+    background: var(--hair); color: var(--accent); font-family: var(--mono); font-size:14px;
+    display:none; align-items:center; justify-content:center; cursor:pointer; z-index:2;
   }
+  .app.edit-mode .stat-swap-btn { display:flex; }
+
+  .cockpit-void { flex:0 0 80px; border-radius:9px; pointer-events:none; }
+
+  /* --- mini-riga personalizzabile (default Sessione/Distanza), solo in fondo alla colonna sx --- */
+  .mini-row { display:flex; gap:6px; flex:0 0 40px; }
+  .mini-item {
+    flex:1 1 0; background: var(--bg2); border-radius:8px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; position:relative; min-width:0;
+  }
+  .mini-label { font-family: var(--mono); font-size:7.5px; letter-spacing:1px; color: var(--ink-dim); text-transform:uppercase; }
+  .mini-val { font-family: var(--disp); font-size:16px; color: var(--ink); font-weight:700; }
+  .mini-item .stat-swap-btn { top:2px; right:2px; width:26px; height:26px; font-size:11px; }
+
+  /* ============ colonna centrale: barra navigatore + mappa ============ */
+  .col-center { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; }
+
+  .col-map { flex:1 1 auto; min-width:0; position:relative; border-radius:9px; overflow:hidden; background: var(--bg2); }
   #gmap { width:100%; height:100%; background: var(--panel); }
 
   .map-arrow {
@@ -110,8 +142,6 @@
   }
   .map-arrow::after { content:''; position:absolute; left:-11px; top:22px; width:22px; height:8px; background: var(--amber); border-radius:0 0 4px 4px; opacity:.85; }
 
-  .map-badge { position:absolute; top:8px; left:8px; z-index:401; background: var(--overlay-bg); border:1px solid var(--panel-edge); border-radius:7px; padding:4px 8px; font-family: var(--mono); font-size:10px; color: var(--text); box-shadow: 0 0 10px rgba(46,142,255,.15); }
-  .map-badge b { color: var(--ink); }
   .map-nav-btn {
     position:absolute; top:8px; right:8px; z-index:401; width:30px; height:30px; border-radius:8px;
     background: var(--overlay-bg); border:1px solid var(--panel-edge); display:flex; align-items:center; justify-content:center;
@@ -128,88 +158,18 @@
   }
   .map-recenter-btn.show { display:flex; }
 
-  .nav-panel {
-    position:absolute; left:8px; bottom:34px; z-index:401; display:none;
-    align-items:center; gap:8px; background: var(--overlay-bg); border:1px solid var(--panel-edge);
-    border-radius:9px; padding:6px 10px; max-width: calc(100% - 16px);
+  .nav-topbar {
+    flex:0 0 30px; display:flex; align-items:center; justify-content:center; gap:10px;
+    background: var(--bg2); border-radius:9px; padding:0 12px;
   }
-  .nav-panel.show { display:flex; }
-  .nav-panel-chevron { font-family: var(--mono); font-size:20px; color: var(--accent); flex:0 0 auto; }
-  .nav-panel-body { min-width:0; }
-  .nav-panel-text { font-family: var(--mono); font-size:11px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
-  .nav-panel-dist { font-family: var(--mono); font-size:10px; color: var(--ink-dim); margin-top:1px; }
+  .nav-topbar-chevron { font-family: var(--mono); font-size:16px; color: var(--accent); flex:0 0 auto; }
+  .nav-topbar-text { font-family: var(--mono); font-size:11px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nav-topbar-text b { color: var(--blue-glow); }
+  .nav-topbar-dist { font-family: var(--mono); font-size:10px; color: var(--ink-dim); }
+  .nav-topbar-eta { font-family: var(--mono); font-size:9px; color: var(--ink-dim); margin-left:auto; flex:0 0 auto; }
+  .nav-topbar.idle .nav-topbar-text { color: var(--ink-dim); }
 
-  .route-info {
-    position:absolute; top:44px; right:8px; z-index:401; display:none;
-    background: var(--overlay-bg); border:1px solid var(--panel-edge); border-radius:7px;
-    padding:4px 8px; font-family: var(--mono); font-size:10px; color: var(--ink);
-  }
-  .route-info.show { display:block; }
-
-  .resize-handle { flex: 0 0 20px; display:flex; align-items:center; justify-content:center; cursor:ew-resize; touch-action:none; position:relative; z-index:5; }
-  .resize-handle .grip { width:5px; height:44px; border-radius:3px; background: var(--panel-edge); box-shadow: 0 0 8px rgba(46,142,255,.15); transition: background .15s; }
-  .resize-handle:active .grip, .resize-handle.dragging .grip { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
-
-  /* ============ HUD column (right) ============ */
-  .col-hud { flex:1 1 auto; min-width:100px; display:flex; flex-direction:column; gap:5px; min-height:0; }
-  .hud-top { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:5px; overflow-y:auto; }
-  .hud-bottom { flex:0 0 auto; display:flex; flex-direction:column; gap:7px; }
-
-  /* --- lean + pitch badges + barra G, riga interna a hud-top --- */
-  .gauge-cluster { flex:1 1 auto; min-height:0; display:flex; gap:8px; }
-  .gauges-col { flex:1 1 auto; display:flex; flex-direction:column; gap:6px; min-width:0; }
-  .gauge-badge { display:flex; align-items:center; gap:9px; min-width:0; }
-  .lean-badge { flex: 1.5 1 0; }
-  .pitch-badge { flex: 1 1 0; }
-
-  .gauge-chevron {
-    font-family: var(--mono); line-height:1; color: var(--accent);
-    border:1px solid var(--hair); border-radius:6px; padding:5px 9px;
-    transition: color .15s, border-color .15s;
-  }
-  .lean-badge .gauge-chevron { font-size: clamp(26px, 6.5vh, 36px); }
-  .pitch-badge .gauge-chevron { font-size: clamp(18px, 4.2vh, 24px); }
-  /* soglie colore warn/danger: solo la piega le usa (updateLeanGauge()) — il beccheggio non
-     ha mai soglie colore per spec, quindi queste regole sono scoped a .lean-badge invece di
-     essere globali, per rispecchiare in CSS un vincolo che finora esisteva solo in JS */
-  .lean-badge .gauge-chevron.warn { color: var(--amber); border-color: var(--amber); }
-  .lean-badge .gauge-chevron.danger { color: var(--red); border-color: var(--red); }
-
-  .gauge-body { flex:0 0 auto; min-width:0; }
-  .gauge-num { font-family: var(--disp); font-weight:800; line-height:1; color: var(--ink); letter-spacing:.5px; }
-  .lean-badge .gauge-num { font-size: clamp(34px, 8.5vh, 50px); }
-  .pitch-badge .gauge-num { font-size: clamp(20px, 5.2vh, 28px); }
-  .lean-badge .gauge-num.warn { color: var(--amber); }
-  .lean-badge .gauge-num.danger { color: var(--red); }
-  .gauge-sub { font-family: var(--mono); font-size:9.5px; letter-spacing:1.3px; color: var(--ink-dim); margin-top:2px; }
-
-  .gauge-maxrow { margin-left:auto; text-align:right; font-family: var(--mono); font-size:10.5px; color: var(--ink-dim); line-height:1.7; white-space:nowrap; }
-  .gauge-maxrow b { color: var(--ink); font-weight:700; font-size:12px; }
-
-  /* --- G force vertical bar --- */
-  .gforce-bar {
-    width:26px; flex:0 0 auto; align-self:stretch; border-radius:5px; position:relative;
-    background: linear-gradient(180deg, var(--blue) 0%, #6FE0B8 26%, var(--hair) 48%, var(--hair) 52%, var(--amber) 74%, var(--red) 100%);
-  }
-  .gforce-marker {
-    position:absolute; left:-4px; right:-4px; height:6px; top:50%; transform: translateY(-50%);
-    background: var(--ink); border-radius:3px; box-shadow: 0 0 8px 1px rgba(0,0,0,.55), 0 0 4px var(--bg2);
-    opacity:0; transition: opacity .3s, top .12s linear;
-  }
-  .gforce-val {
-    position:absolute; bottom:5px; left:-8px; right:-8px; text-align:center;
-    font-family: var(--mono); font-size:9px; font-weight:700; color: var(--ink);
-    text-shadow: 0 0 4px var(--bg), 0 0 4px var(--bg);
-  }
-
-  /* --- riga compatta velocità + punteggio --- */
-  .mini-row { display:flex; gap:16px; border-top:1px solid var(--hair); padding-top:6px; flex:0 0 auto; }
-  .mini-item { display:flex; flex-direction:column; }
-  .mini-label { font-family: var(--mono); font-size:8px; letter-spacing:1px; color: var(--ink-dim); text-transform:uppercase; }
-  .mini-val { font-family: var(--disp); font-size:20px; color: var(--ink); font-weight:700; }
-  .mini-unit { font-size:11px; color: var(--ink-dim); margin-left:2px; font-family: var(--mono); font-weight:400; }
-
-  /* ============ big blind-tappable controls (monocromatici) ============ */
+  /* ============ pulsanti (invariati nello stile, li sposta il Task 5 nel pannello comandi) ============ */
   .btn-big {
     appearance:none; border:none; border-radius:12px; padding:14px; font-family: var(--disp); font-weight:700; font-size:16px; letter-spacing:1px;
     display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; min-height:56px;
@@ -263,76 +223,95 @@
 
   <div class="app">
     <div class="topbar">
-      <div class="brand">TELEMETRIA<span>.MOTO</span></div>
+      <div class="brand">TELAMETRIA<span style="font-size:8px; letter-spacing:.5px; margin-left:6px; vertical-align:middle;">By TelaStampiamo</span></div>
       <div class="status-row"><div class="status-dot" id="statusDot"></div><span id="statusText">FERMO</span></div>
     </div>
     <div class="perm-note" id="permNote">Supporto fisso. <b>Calibra</b> a moto ferma prima di partire.</div>
 
     <div class="layout">
 
-      <div class="col-map" id="colMap">
-        <div id="gmap"></div>
-        <div class="map-arrow" id="mapArrow"></div>
-        <div class="map-badge"><b id="distVal">0.0</b> km</div>
-        <div class="map-nav-btn" id="mapNavBtn">🧭</div>
-        <div class="map-recenter-btn" id="mapRecenterBtn">📍</div>
-        <div class="route-info" id="routeInfoEl"></div>
-        <div class="nav-panel" id="navPanelEl">
-          <div class="nav-panel-chevron" id="navPanelChevron">▲</div>
-          <div class="nav-panel-body">
-            <div class="nav-panel-text" id="navPanelText"></div>
-            <div class="nav-panel-dist" id="navPanelDist"></div>
+      <div class="col-side left" id="colSideLeft">
+        <div class="slot" id="slotLeftTop"></div>
+        <div class="slot" id="slotLeftBottom"></div>
+        <div class="mini-row">
+          <div class="mini-item" id="miniSlot1">
+            <div class="stat-swap-btn" data-mini-slot="slot1">⇄</div>
+            <span class="mini-label" id="miniLabel1">Sessione</span>
+            <span class="mini-val" id="miniVal1">00:00</span>
+          </div>
+          <div class="mini-item" id="miniSlot2">
+            <div class="stat-swap-btn" data-mini-slot="slot2">⇄</div>
+            <span class="mini-label" id="miniLabel2">Distanza</span>
+            <span class="mini-val" id="miniVal2">0.0km</span>
           </div>
         </div>
-        <div class="map-empty" id="mapEmpty">In attesa di segnale GPS…</div>
       </div>
 
-      <div class="resize-handle" id="resizeHandle"><div class="grip"></div></div>
-
-      <div class="col-hud">
-        <div class="hud-top">
-          <div class="gauge-cluster">
-            <div class="gauges-col">
-              <div class="gauge-badge lean-badge">
-                <div class="gauge-chevron" id="leanChevron">–</div>
-                <div class="gauge-body">
-                  <div class="gauge-num" id="leanNumBig">--°</div>
-                  <div class="gauge-sub" id="leanSub">PIEGA</div>
-                </div>
-                <div class="gauge-maxrow">SX <b id="leanMaxSx">--°</b><br>DX <b id="leanMaxDx">--°</b></div>
-              </div>
-              <div class="gauge-badge pitch-badge">
-                <div class="gauge-chevron" id="pitchChevron">–</div>
-                <div class="gauge-body">
-                  <div class="gauge-num" id="pitchNumBig">--°</div>
-                  <div class="gauge-sub" id="pitchSub">BECCHEGGIO</div>
-                </div>
-                <div class="gauge-maxrow">GIÙ <b id="pitchMaxDown">--°</b><br>SU <b id="pitchMaxUp">--°</b></div>
-              </div>
-            </div>
-            <div class="gforce-bar">
-              <div class="gforce-marker" id="gGhost"></div>
-              <div class="gforce-val" id="gforceVal">0.00g</div>
-            </div>
-          </div>
-
-          <div class="mini-row">
-            <div class="mini-item"><span class="mini-label">Velocità</span><span class="mini-val" id="speedVal">--<span class="mini-unit">km/h</span></span></div>
-            <div class="mini-item"><span class="mini-label">Guida</span><span class="mini-val" id="scoreNum">--</span></div>
-          </div>
+      <div class="col-center">
+        <div class="nav-topbar idle" id="navTopbar">
+          <div class="nav-topbar-chevron" id="navTopbarChevron">–</div>
+          <div class="nav-topbar-text" id="navTopbarText">Nessun percorso impostato</div>
+          <div class="nav-topbar-dist" id="navTopbarDist"></div>
+          <div class="nav-topbar-eta" id="navTopbarEta"></div>
         </div>
-
-        <div class="hud-bottom">
-          <button class="btn-big start" id="mainBtn">Avvia</button>
-          <button class="btn-big calib" id="calibBtn">Calibra</button>
-          <div class="mini-actions-row">
-            <button class="btn-mini" id="resetMaxBtn">↺ Reset max</button>
-            <button class="btn-mini" id="settingsBtn">⚙ Impostazioni</button>
-            <button class="btn-mini" id="exportBtn" disabled>⭳ CSV</button>
-          </div>
-          <div class="log-info" id="logInfo"></div>
+        <div class="col-map" id="colMap">
+          <div id="gmap"></div>
+          <div class="map-arrow" id="mapArrow"></div>
+          <div class="map-nav-btn" id="mapNavBtn">🧭</div>
+          <div class="map-recenter-btn" id="mapRecenterBtn">📍</div>
+          <div class="map-empty" id="mapEmpty">In attesa di segnale GPS…</div>
         </div>
       </div>
+
+      <div class="col-side right" id="colSideRight">
+        <div class="slot" id="slotRightTop"></div>
+        <div class="slot" id="slotRightBottom"></div>
+        <div class="cockpit-void"></div>
+      </div>
+    </div>
+
+    <div id="cardLean" class="stat-card" data-metric="lean">
+      <div class="stat-swap-btn" data-metric="lean">⇄</div>
+      <div class="stat-card-label">Piega</div>
+      <div class="stat-card-num" id="leanNumBig">--°</div>
+      <div class="stat-card-sub" id="leanSub">–</div>
+      <div class="stat-bar-track"><div class="stat-bar-fill" id="leanBarFill" style="left:50%; width:0%"></div></div>
+      <div class="stat-bar-ticks"><span>60</span><span>0</span><span>60</span></div>
+      <div class="stat-maxrow"><span>MAX SX <b id="leanMaxSx">--°</b></span><span>MAX DX <b id="leanMaxDx">--°</b></span></div>
+    </div>
+    <div id="cardPitch" class="stat-card" data-metric="pitch">
+      <div class="stat-swap-btn" data-metric="pitch">⇄</div>
+      <div class="stat-card-label">Beccheggio</div>
+      <div class="stat-card-num" id="pitchNumBig">--°</div>
+      <div class="stat-card-sub" id="pitchSub">–</div>
+      <div class="stat-bar-track"><div class="stat-bar-fill" id="pitchBarFill" style="left:50%; width:0%"></div></div>
+      <div class="stat-bar-ticks"><span>45</span><span>0</span><span>45</span></div>
+      <div class="stat-maxrow"><span>UP <b id="pitchMaxUp">--°</b></span><span>DOWN <b id="pitchMaxDown">--°</b></span></div>
+    </div>
+    <div id="cardGLat" class="stat-card" data-metric="gLat">
+      <div class="stat-swap-btn" data-metric="gLat">⇄</div>
+      <div class="stat-card-label">G Laterale</div>
+      <div class="stat-card-num" id="gLatNumBig">0.00g</div>
+      <div class="stat-bar-track"><div class="stat-bar-fill" id="gLatBarFill" style="left:50%; width:0%"></div></div>
+      <div class="stat-bar-ticks"><span>-1.5</span><span>0</span><span>1.5</span></div>
+      <div class="stat-maxrow"><span>TOP <b id="gLatTop">0.00g</b></span></div>
+    </div>
+    <div id="cardGLong" class="stat-card" data-metric="gLong">
+      <div class="stat-swap-btn" data-metric="gLong">⇄</div>
+      <div class="stat-card-label">G Longitudinale</div>
+      <div class="stat-card-num" id="gLongNumBig">0.00g</div>
+      <div class="stat-bar-track"><div class="stat-bar-fill" id="gLongBarFill" style="left:50%; width:0%"></div></div>
+      <div class="stat-bar-ticks"><span>-1</span><span>0</span><span>1</span></div>
+      <div class="stat-maxrow"><span>TOP <b id="gLongTop">0.00g</b></span></div>
+    </div>
+
+    <div class="hud-bottom-placeholder" style="display:none">
+      <button class="btn-big start" id="mainBtn">Avvia</button>
+      <button class="btn-big calib" id="calibBtn">Calibra</button>
+      <button class="btn-mini" id="resetMaxBtn">↺ Reset max</button>
+      <button class="btn-mini" id="settingsBtn">⚙ Impostazioni</button>
+      <button class="btn-mini" id="exportBtn" disabled>⭳ CSV</button>
+      <div class="log-info" id="logInfo"></div>
     </div>
   </div>
 
@@ -372,8 +351,10 @@
   const logInfo = $('logInfo');
   const permNote = $('permNote');
   const scoreNum = $('scoreNum');
-  const distVal = $('distVal'), mapEmpty = $('mapEmpty'), mapArrow = $('mapArrow');
-  const colMap = $('colMap'), resizeHandle = $('resizeHandle');
+  const mapEmpty = $('mapEmpty'), mapArrow = $('mapArrow');
+  const colMap = $('colMap');
+  const slotLeftTop = $('slotLeftTop'), slotLeftBottom = $('slotLeftBottom'), slotRightTop = $('slotRightTop'), slotRightBottom = $('slotRightBottom');
+  const cardLean = $('cardLean'), cardPitch = $('cardPitch'), cardGLat = $('cardGLat'), cardGLong = $('cardGLong');
   const settingsBtn = $('settingsBtn'), settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop'), settingsClose = $('settingsClose');
   const themeToggle = $('themeToggle');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
@@ -386,21 +367,16 @@
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
   const root = document.documentElement;
 
-  /* ---------- resizable map (drag handle) ---------- */
-  (function initResize(){
-    let saved = null;
-    try { saved = localStorage.getItem('moto_map_pct'); } catch(e){}
-    if (saved) root.style.setProperty('--map-pct', saved + '%');
-    let dragging = false, startX = 0, startPct = parseFloat(saved || 60);
-    const layoutEl = document.querySelector('.layout');
-    function onDown(e){ dragging = true; startX = e.clientX; startPct = parseFloat(getComputedStyle(root).getPropertyValue('--map-pct')) || 60; resizeHandle.classList.add('dragging'); resizeHandle.setPointerCapture(e.pointerId); }
-    function onMove(e){ if (!dragging) return; const dx = e.clientX - startX; const w = layoutEl.clientWidth || 1; let pct = clamp(startPct + (dx / w * 100), 32, 82); root.style.setProperty('--map-pct', pct.toFixed(1) + '%'); }
-    function onUp(){ if (!dragging) return; dragging = false; resizeHandle.classList.remove('dragging'); const pct = getComputedStyle(root).getPropertyValue('--map-pct'); try { localStorage.setItem('moto_map_pct', parseFloat(pct)); } catch(e){} if (gmap) setTimeout(() => google.maps.event.trigger(gmap, 'resize'), 200); }
-    resizeHandle.addEventListener('pointerdown', onDown);
-    resizeHandle.addEventListener('pointermove', onMove);
-    resizeHandle.addEventListener('pointerup', onUp);
-    resizeHandle.addEventListener('pointercancel', onUp);
-  })();
+  /* ---------- assegnazione card grandi agli slot (default; lo scambio arriva nel Task 6) ---------- */
+  const CARD_METRICS = ['lean', 'pitch', 'gLat', 'gLong'];
+  const CARD_EL = { lean: cardLean, pitch: cardPitch, gLat: cardGLat, gLong: cardGLong };
+  const SLOT_EL = { leftTop: slotLeftTop, leftBottom: slotLeftBottom, rightTop: slotRightTop, rightBottom: slotRightBottom };
+  const SLOT_KEYS = ['leftTop', 'leftBottom', 'rightTop', 'rightBottom'];
+  let cardLayout = { leftTop: 'lean', leftBottom: 'gLat', rightTop: 'pitch', rightBottom: 'gLong' };
+  function applyCardLayout(){
+    SLOT_KEYS.forEach(slotKey => { SLOT_EL[slotKey].appendChild(CARD_EL[cardLayout[slotKey]]); });
+  }
+  applyCardLayout();
 
   /* ---------- settings popover ---------- */
   settingsBtn.addEventListener('click', () => { settingsPanel.classList.add('open'); settingsBackdrop.classList.add('open'); });
@@ -459,8 +435,12 @@
     navStepIndex = 0;
     navAnnounced = false;
     navActive = true;
-    navPanelEl.classList.add('show');
-    routeInfoEl.classList.add('show');
+    // #navPanelEl/#routeInfoEl/#navPanelChevron/#navPanelText/#navPanelDist appartenevano al
+    // vecchio overlay di navigazione sulla mappa, rimosso col layout a tre colonne (Step 3) —
+    // un task futuro consoliderà questi contenuti nel nuovo #navTopbar. Guardie null qui sotto
+    // per non interrompere lo stato di navigazione (navActive/navSteps) né la sintesi vocale.
+    if (navPanelEl) navPanelEl.classList.add('show');
+    if (routeInfoEl) routeInfoEl.classList.add('show');
     updateNavPanel();
     updateRouteInfo();
   }
@@ -469,30 +449,30 @@
     navActive = false;
     navSteps = [];
     navStepIndex = 0;
-    navPanelEl.classList.remove('show');
-    routeInfoEl.classList.remove('show');
+    if (navPanelEl) navPanelEl.classList.remove('show');
+    if (routeInfoEl) routeInfoEl.classList.remove('show');
     stopGpsIfIdle();
   }
 
   function updateNavPanel(){
     if (!navActive || navStepIndex >= navSteps.length) return;
     const step = navSteps[navStepIndex];
-    navPanelChevron.textContent = chevronForManeuver(step.maneuver);
-    navPanelText.textContent = step.instructionText;
+    if (navPanelChevron) navPanelChevron.textContent = chevronForManeuver(step.maneuver);
+    if (navPanelText) navPanelText.textContent = step.instructionText;
   }
 
   function updateRouteInfo(){
     if (!navActive) return;
     let remM = 0, remS = 0;
     for (let i = navStepIndex; i < navSteps.length; i++) { remM += navSteps[i].distanceM; remS += navSteps[i].durationS; }
-    routeInfoEl.textContent = (remM / 1000).toFixed(1) + ' km · ' + Math.round(remS / 60) + ' min';
+    if (routeInfoEl) routeInfoEl.textContent = (remM / 1000).toFixed(1) + ' km · ' + Math.round(remS / 60) + ' min';
   }
 
   function updateNavProgress(lat, lon){
     if (!navActive || navStepIndex >= navSteps.length) return;
     const step = navSteps[navStepIndex];
     const dist = distanceMeters(lat, lon, step.endLat, step.endLon);
-    navPanelDist.textContent = dist >= 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m';
+    if (navPanelDist) navPanelDist.textContent = dist >= 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m';
 
     if (!navAnnounced && dist < 150) {
       speak(step.instructionText);
@@ -504,8 +484,8 @@
       navAnnounced = false;
       if (navStepIndex >= navSteps.length) {
         speak('Sei arrivato a destinazione.');
-        navPanelText.textContent = 'Arrivato';
-        navPanelDist.textContent = '';
+        if (navPanelText) navPanelText.textContent = 'Arrivato';
+        if (navPanelDist) navPanelDist.textContent = '';
         updateRouteInfo();
         return;
       }
@@ -745,13 +725,15 @@
     const abs = Math.abs(rollDeg);
     const isDx = rollDeg < 0;
     leanNumBig.textContent = abs.toFixed(0) + '°';
-    leanChevron.textContent = isDx ? '▶' : '◀';
+    // #leanChevron apparteneva al vecchio badge/chevron, rimosso col layout a tre colonne
+    // (Step 3) — guardia null in attesa che un task futuro gli trovi un posto nella nuova card.
+    if (leanChevron) leanChevron.textContent = isDx ? '▶' : '◀';
     leanSub.textContent = 'PIEGA · ' + (isDx ? 'DX' : 'SX');
 
     leanNumBig.classList.remove('warn','danger');
-    leanChevron.classList.remove('warn','danger');
-    if (abs > 40) { leanNumBig.classList.add('danger'); leanChevron.classList.add('danger'); }
-    else if (abs > 25) { leanNumBig.classList.add('warn'); leanChevron.classList.add('warn'); }
+    if (leanChevron) leanChevron.classList.remove('warn','danger');
+    if (abs > 40) { leanNumBig.classList.add('danger'); if (leanChevron) leanChevron.classList.add('danger'); }
+    else if (abs > 25) { leanNumBig.classList.add('warn'); if (leanChevron) leanChevron.classList.add('warn'); }
 
     if (isDx) { if (abs > maxLeanDx) maxLeanDx = abs; }
     else { if (abs > maxLeanSx) maxLeanSx = abs; }
@@ -762,7 +744,8 @@
   function updatePitchGauge(pitchDeg){
     const abs = Math.abs(pitchDeg);
     pitchNumBig.textContent = abs.toFixed(0) + '°';
-    pitchChevron.textContent = pitchDeg >= 0 ? '▲' : '▼';
+    // #pitchChevron rimosso col layout a tre colonne (Step 3), vedi nota in updateLeanGauge().
+    if (pitchChevron) pitchChevron.textContent = pitchDeg >= 0 ? '▲' : '▼';
     pitchSub.textContent = 'BECCH. · ' + (pitchDeg >= 0 ? 'SU' : 'GIÙ');
 
     if (pitchDeg >= 0) { if (pitchDeg > maxPitchUp) maxPitchUp = pitchDeg; }
@@ -798,13 +781,19 @@
     } else { lastGammaForRate = currentLean; lastGammaTime = now; }
   }
 
+  // #gforceVal/#gGhost appartenevano alla vecchia barra G verticale, rimossa col layout a tre
+  // colonne (Step 3) — gPeak() resta chiamato incondizionatamente per non perdere lo stato di
+  // picco, ma le scritture DOM sono guardate finché un task futuro non le ricollega alle nuove
+  // card #cardGLat/#cardGLong.
   function updateGforceGauge(gSmooth, now){
-    gforceVal.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
+    if (gforceVal) gforceVal.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
 
     const gp = gPeak(gSmooth, now);
-    const pct = clamp(gp.peak / 1.0 * 50, 0, 50);
-    gGhost.style.top = (gp.sign >= 0 ? (50 - pct) : (50 + pct)) + '%';
-    gGhost.style.opacity = gp.opacity;
+    if (gGhost) {
+      const pct = clamp(gp.peak / 1.0 * 50, 0, 50);
+      gGhost.style.top = (gp.sign >= 0 ? (50 - pct) : (50 + pct)) + '%';
+      gGhost.style.opacity = gp.opacity;
+    }
   }
 
   function handleMotion(e){
@@ -846,7 +835,8 @@
   }
 
   function renderScore(overall){
-    scoreNum.textContent = overall.toFixed(0);
+    // #scoreNum apparteneva alla vecchia mini-row, rimossa col layout a tre colonne (Step 3).
+    if (scoreNum) scoreNum.textContent = overall.toFixed(0);
   }
 
   function zoomForSpeed(kmh){
@@ -935,7 +925,10 @@
 
   function handlePosition(pos){
     const kmh = pos.coords.speed !== null && pos.coords.speed >= 0 ? (pos.coords.speed * 3.6) : null;
-    speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="mini-unit">km/h</span>';
+    // #speedVal apparteneva alla vecchia mini-row (velocità/punteggio), rimossa col layout a tre
+    // colonne (Step 3) — mini-row ora mostra di default Sessione/Distanza. Guardia null in
+    // attesa che un task futuro assegni la velocità a uno slot mini-riga.
+    if (speedVal) speedVal.innerHTML = (kmh !== null ? kmh.toFixed(0) : '--') + '<span class="mini-unit">km/h</span>';
 
     let heading = null;
     if (pos.coords.heading !== null && pos.coords.heading !== undefined && !isNaN(pos.coords.heading) && (kmh === null || kmh > 5)) heading = pos.coords.heading;
@@ -947,7 +940,8 @@
       if (d > 0.5) totalDistanceM += d;
     }
     lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
-    distVal.textContent = (totalDistanceM / 1000).toFixed(1);
+    // #distVal (vecchio map-badge) è stato rimosso col layout a tre colonne; totalDistanceM
+    // resta calcolato qui per un task futuro che lo mostrerà in #miniVal2 ("Distanza").
 
     updateMap(lastLat, lastLon, kmh, heading);
     updateNavProgress(lastLat, lastLon);
@@ -1029,7 +1023,6 @@
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
     totalDistanceM = 0; lastLat = null; lastLon = null;
-    distVal.textContent = '0.0';
     setStatus(true, 'REGISTRA');
     permNote.style.display = 'none';
 
