@@ -89,6 +89,7 @@
 
   /* ============ colonne laterali (piega+Glat a sx, beccheggio+Glong a dx) ============ */
   .col-side { flex:0 0 168px; display:flex; flex-direction:column; gap:6px; min-height:0; }
+  .slot { flex:1 1 0; min-height:0; display:flex; }
 
   .stat-card {
     flex:1 1 0; min-height:0; background: var(--bg2); border-radius:9px; padding:8px 10px;
@@ -179,7 +180,7 @@
 
   /* ============ pulsanti (invariati nello stile, li sposta il Task 5 nel pannello comandi) ============ */
   .btn-big {
-    appearance:none; border:none; border-radius:12px; padding:14px; font-family: var(--disp); font-weight:700; font-size:16px; letter-spacing:1px;
+    appearance:none; border:none; border-radius:12px; padding:14px; width:100%; font-family: var(--disp); font-weight:700; font-size:16px; letter-spacing:1px;
     display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; min-height:56px;
     transition: transform .1s, opacity .2s;
   }
