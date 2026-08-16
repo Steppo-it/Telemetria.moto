@@ -35,8 +35,7 @@ def build_replay_figure(df, decimation_s=None):
                                     mode='markers', marker=dict(size=14, color='orange'), name='Posizione'))
 
     frames = [
-        go.Frame(name=str(idx), traces=[0, 1], data=[
-            go.Scattermapbox(lat=df['lat'], lon=df['lon']),
+        go.Frame(name=str(idx), traces=[1], data=[
             go.Scattermapbox(lat=[df['lat'].iloc[idx]], lon=[df['lon'].iloc[idx]]),
         ])
         for idx in indices
@@ -135,7 +134,7 @@ _SYNC_JS = """
 
 def render_replay_html(df, div_id='replay-map'):
     fig, indices = build_replay_figure(df)
-    map_html = fig.to_html(full_html=False, include_plotlyjs=False, div_id=div_id)
+    map_html = fig.to_html(full_html=False, include_plotlyjs=False, div_id=div_id, auto_play=False)
     payload = _replay_frame_payload(df, indices)
     sync_js = _SYNC_JS.format(payload_json=json.dumps(payload), div_id=div_id, first_idx=indices[0])
     return f'<section id="replay"><h2>Replay percorso</h2>{map_html}{_ICON_SVG}{sync_js}</section>'
