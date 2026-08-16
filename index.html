@@ -1061,6 +1061,7 @@
     }
 
     ensureGps();
+    requestWakeLock();
 
     recording = true;
     logData = [];
@@ -1114,6 +1115,21 @@
   });
 
   window.addEventListener('orientationchange', () => { if (gmap) setTimeout(() => google.maps.event.trigger(gmap, 'resize'), 300); });
+
+  /* ---------- blocco schermo (Wake Lock API) ---------- */
+  // Il rilascio è automatico quando la tab va in background (regola della API, non
+  // dipende da noi) — va quindi ri-richiesto ad ogni volta che la pagina torna visibile,
+  // non solo una volta al caricamento. Supportato da Safari iOS a partire da iOS 16.4.
+  let wakeLock = null;
+  async function requestWakeLock(){
+    if (!('wakeLock' in navigator)) return;
+    try { wakeLock = await navigator.wakeLock.request('screen'); }
+    catch (err) { /* best-effort: nessun impatto sul resto dell'app se non disponibile/negato */ }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
+  });
+  requestWakeLock();
 
   setStatus(false, 'FERMO');
 })();
