@@ -107,8 +107,8 @@
   .stat-bar-fill { position:absolute; top:0; bottom:0; border-radius:4px; background: var(--blue-glow); }
   .stat-bar-ticks { display:flex; justify-content:space-between; font-family: var(--mono); font-size:8px; color: var(--ink-dim); }
 
-  .stat-maxrow { display:flex; justify-content:space-between; font-family: var(--mono); font-size:9px; color: var(--ink-dim); margin-top:5px; }
-  .stat-maxrow b { color: var(--ink); font-weight:700; }
+  .stat-maxrow { display:flex; justify-content:space-between; font-family: var(--mono); font-size:12px; color: var(--ink-dim); margin-top:6px; }
+  .stat-maxrow b { color: var(--ink); font-weight:700; font-size:14px; }
 
   .stat-swap-btn {
     position:absolute; top:4px; right:4px; width:30px; height:30px; border-radius:7px;
@@ -163,14 +163,14 @@
   .map-recenter-btn.show { display:flex; }
 
   .nav-topbar {
-    flex:0 0 30px; display:flex; align-items:center; justify-content:center; gap:10px;
+    flex:0 0 38px; display:flex; align-items:center; justify-content:center; gap:10px;
     background: var(--bg2); border-radius:9px; padding:0 12px;
   }
-  .nav-topbar-chevron { font-family: var(--mono); font-size:16px; color: var(--accent); flex:0 0 auto; }
-  .nav-topbar-text { font-family: var(--mono); font-size:11px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nav-topbar-chevron { font-family: var(--mono); font-size:20px; color: var(--accent); flex:0 0 auto; }
+  .nav-topbar-text { font-family: var(--mono); font-size:14px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .nav-topbar-text b { color: var(--blue-glow); }
-  .nav-topbar-dist { font-family: var(--mono); font-size:10px; color: var(--ink-dim); }
-  .nav-topbar-eta { font-family: var(--mono); font-size:9px; color: var(--ink-dim); margin-left:auto; flex:0 0 auto; }
+  .nav-topbar-dist { font-family: var(--mono); font-size:12px; color: var(--ink-dim); }
+  .nav-topbar-eta { font-family: var(--mono); font-size:11px; color: var(--ink-dim); margin-left:auto; flex:0 0 auto; }
   .nav-topbar.idle .nav-topbar-text { color: var(--ink-dim); }
 
   /* ============ pulsanti (invariati nello stile, li sposta il Task 5 nel pannello comandi) ============ */
@@ -195,6 +195,10 @@
   .popover-backdrop.open { display:block; }
   .popover-panel { position:fixed; bottom:12px; right:12px; left:12px; z-index:901; background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:14px; box-shadow: 0 0 30px rgba(46,142,255,.25); display:none; max-height: calc(100vh - 24px); overflow-y: auto; }
   .popover-panel.open { display:block; }
+  /* Il Navigatore resta ancorato in alto (non in basso come gli altri popover): con la tastiera
+     aperta per digitare l'indirizzo, un pannello ancorato in basso rischia di finire coperto
+     dalla tastiera stessa, portandosi dietro anche il campo e i suggerimenti Google Places. */
+  #navPanel { bottom:auto; top:12px; }
   .popover-title { font-family: var(--disp); font-size:13px; letter-spacing:1px; color: var(--ink); margin-bottom:10px; }
   .settings-row { display:flex; justify-content:space-between; align-items:center; font-family: var(--mono); font-size:11px; color: var(--text); padding:8px 0; border-top:1px solid var(--panel-edge); }
   .settings-row:first-of-type { border-top:none; }
@@ -321,9 +325,9 @@
   <div class="popover-backdrop" id="navBackdrop"></div>
   <div class="popover-panel" id="navPanel">
     <div class="popover-title">NAVIGATORE</div>
+    <input type="text" id="destInput" class="settings-input" placeholder="Indirizzo o luogo di destinazione..." />
     <div id="waypointList"></div>
     <button class="btn-mini" id="addWaypointBtn" type="button">+ Aggiungi tappa</button>
-    <input type="text" id="destInput" class="settings-input" placeholder="Indirizzo o luogo di destinazione..." />
     <div class="mini-actions-row">
       <button class="btn-mini" id="navGoBtn">Vai</button>
       <button class="btn-mini" id="navClearBtn">Annulla percorso</button>
@@ -702,13 +706,22 @@
   // atan2 (invece di deviceorientation.beta) resta comunque necessario: beta è un angolo di Eulero e
   // soffre di gimbal lock/salti oltre ~90° (es. ~-350° durante un'impennata), mentre atan2 su due
   // componenti del vettore di gravità resta continuo su tutto l'intervallo.
-  // Nota: per costruzione (atan2(y, sqrt(...)) con secondo argomento sempre >= 0) l'output è
-  // matematicamente limitato all'intervallo (-90°, 90°]: un dispositivo inclinato realmente
-  // oltre i 90° leggerà un valore saturato vicino a ±90° invece di continuare oltre — trade-off
-  // accettato, non un bug.
+  // Formula: atan2(-comp.y, gz) — due componenti CON SEGNO, non atan2(-comp.y, sqrt(comp.x²+gz²))
+  // come in una prima versione. La versione con sqrt() (denominatore sempre >= 0) è il classico
+  // "pitch indipendente dal roll" da manualistica IMU, ma per costruzione satura a ±90°: oltre
+  // quel punto il valore torna a scendere invece di continuare a salire (bug osservato su strada:
+  // sale fino a un certo angolo, poi scende man mano che l'inclinazione REALE continua ad
+  // aumentare). Con un supporto che monta il telefono già inclinato di suo rispetto al terreno
+  // (es. su un cupolino, ~60° dalla orizzontale), l'inclinazione di riposo consuma già buona parte
+  // dei ±90° disponibili PRIMA della calibrazione, quindi il punto di saturazione si raggiunge con
+  // un'inclinazione reale della moto tutt'altro che estrema (~40° nel caso osservato). La versione
+  // a due argomenti CON segno resta continua su tutto l'intervallo ±180°, qualunque sia l'angolo di
+  // montaggio — al costo di non essere più perfettamente indipendente dal roll in caso di piega e
+  // beccheggio estremi contemporanei (scenario raro e comunque non peggiore delle altre stime di
+  // questa sezione, già descritte come approssimazioni).
   function computePitchFromGravity(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
-    const rad = Math.atan2(-comp.y, Math.sqrt(comp.x * comp.x + gz * gz));
+    const rad = Math.atan2(-comp.y, gz);
     return rad * 180 / Math.PI;
   }
 
@@ -716,6 +729,15 @@
   // punteggio, così la lettura visiva è fluida senza cambiare la sensibilità del punteggio guida.
   let gLongDisplay = 0, gLatDisplay = 0;
   const G_DISPLAY_ALPHA = 0.12;
+
+  // Soglie minime di attivazione ("deadzone") — sotto questi valori il dato viene mostrato come
+  // esattamente zero invece del rumore residuo del sensore a moto ferma. Punti di partenza
+  // ragionevoli non calibrati su dati reali, come le altre soglie di questa sezione — da
+  // aggiustare se in marcia risultano troppo/poco aggressive. Non tocca i valori grezzi usati per
+  // il punteggio guida, solo la resa a schermo (stesso principio di gLongDisplay/gLatDisplay sopra).
+  const G_DEADZONE = 0.04;
+  const LEAN_DEADZONE_DEG = 1.0;
+  const PITCH_DEADZONE_DEG = 1.0;
 
   let sensorsActive = false;
   let currentLean = 0, currentPitch = 0;
@@ -781,6 +803,7 @@
   // puntava dal lato sbagliato; la vecchia sagoma SVG applicava già rotate(${-rollDeg}...)
   // per lo stesso motivo, correzione persa quando è stata sostituita dal chevron).
   function updateLeanGauge(rollDeg){
+    if (Math.abs(rollDeg) < LEAN_DEADZONE_DEG) rollDeg = 0;
     const abs = Math.abs(rollDeg);
     const isDx = rollDeg < 0;
     leanNumBig.textContent = abs.toFixed(0) + '°';
@@ -800,6 +823,7 @@
   }
 
   function updatePitchGauge(pitchDeg){
+    if (Math.abs(pitchDeg) < PITCH_DEADZONE_DEG) pitchDeg = 0;
     const abs = Math.abs(pitchDeg);
     pitchNumBig.textContent = abs.toFixed(0) + '°';
     pitchSub.textContent = pitchDeg >= 0 ? 'SU' : 'GIÙ';
@@ -838,16 +862,30 @@
     } else { lastGammaForRate = currentLean; lastGammaTime = now; }
   }
 
+  // Verso del TOP G laterale (DX/SX) non validato su strada: per costruzione condivide lo stesso
+  // asse X compensato (compensateAccelXY) usato dal roll/piega (compensateOrientation), quindi qui
+  // si assume la stessa convenzione già confermata per la piega (negativo = DX, positivo = SX) —
+  // se in marcia risulta invertito, basta scambiare 'DX'/'SX' nella riga sotto.
   function updateGLatGauge(gSmooth){
+    if (Math.abs(gSmooth) < G_DEADZONE) gSmooth = 0;
     gLatNumBig.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
     setBarFill(gLatBarFill, gSmooth, 1.5);
-    if (Math.abs(gSmooth) > maxGLat) { maxGLat = Math.abs(gSmooth); gLatTopEl.textContent = maxGLat.toFixed(2) + 'g'; }
+    if (Math.abs(gSmooth) > Math.abs(maxGLat)) {
+      maxGLat = gSmooth;
+      const side = maxGLat < 0 ? 'DX' : 'SX';
+      gLatTopEl.textContent = Math.abs(maxGLat).toFixed(2) + 'g ' + side;
+    }
   }
 
   function updateGLongGauge(gSmooth){
+    if (Math.abs(gSmooth) < G_DEADZONE) gSmooth = 0;
     gLongNumBig.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
     setBarFill(gLongBarFill, gSmooth, 1.0);
-    if (Math.abs(gSmooth) > maxGLong) { maxGLong = Math.abs(gSmooth); gLongTopEl.textContent = maxGLong.toFixed(2) + 'g'; }
+    if (Math.abs(gSmooth) > Math.abs(maxGLong)) {
+      maxGLong = gSmooth;
+      const dir = maxGLong < 0 ? 'FRENATA' : 'ACCEL';
+      gLongTopEl.textContent = Math.abs(maxGLong).toFixed(2) + 'g ' + dir;
+    }
   }
 
   function handleMotion(e){
