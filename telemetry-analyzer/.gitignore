@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Output generato da esecuzioni manuali del tool nella root del progetto
+/report.html
+/filtered_telemetry.csv
+/events.csv
+/curves.csv
