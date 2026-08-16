@@ -78,3 +78,16 @@ def test_events_to_dataframe_empty_list_has_expected_columns():
     out = events_to_dataframe([])
     assert 'event_type' in out.columns
     assert len(out) == 0
+
+def test_detect_events_merges_multiple_overlapping_curves_into_one_event():
+    # una frenata lunga che attraversa due curve ravvicinate deve produrre
+    # UN SOLO evento FRENATA_CURVA, non uno per ciascuna coppia sovrapposta
+    df = _minimal_filtered_df(
+        accel_fwd=[0.0, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, -0.3, 0.0, 0.0],
+        accel_lat=[0.02, 0.02, 0.3, 0.3, 0.02, 0.02, 0.3, 0.3, 0.02, 0.02],
+        lean=[1.0, 1.0, 15.0, 15.0, 1.0, 1.0, 15.0, 15.0, 1.0, 1.0],
+        heading=[90.0, 90.0, 80.0, 70.0, 65.0, 65.0, 55.0, 45.0, 40.0, 40.0],
+    )
+    events = detect_events(df)
+    combined = [e for e in events if e['event_type'] == 'FRENATA_CURVA']
+    assert len(combined) == 1

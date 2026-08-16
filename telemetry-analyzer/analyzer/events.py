@@ -72,15 +72,32 @@ def detect_events(df):
     curve_runs = [(s, e, 'CURVA') for s, e in hysteresis_runs(curve_enter, curve_exit)]
     vert_runs = [(s, e, 'EVENTO_VERTICALE') for s, e in hysteresis_runs(vert_enter, vert_enter)]
 
-    # frenata + curva combinata: overlap temporale, tag composito, non doppio conteggio
+    # frenata + curva combinata: overlap temporale, gestito con un merge a
+    # singolo passaggio ordinato per catturare correttamente le sovrapposizioni
+    # TRANSITIVE (un run puo' sovrapporsi a piu' di un run dell'altro tipo —
+    # es. una frenata lunga che attraversa due curve ravvicinate deve produrre
+    # UN SOLO evento combinato, non uno per ciascuna coppia sovrapposta)
+    tagged = [(s, e, 'brake', i) for i, (s, e, _) in enumerate(brake_runs)]
+    tagged += [(s, e, 'curve', i) for i, (s, e, _) in enumerate(curve_runs)]
+    tagged.sort(key=lambda item: item[0])
+
+    groups = []
+    for s, e, kind, idx in tagged:
+        if groups and s <= groups[-1]['end']:
+            groups[-1]['end'] = max(groups[-1]['end'], e)
+            groups[-1]['items'].append((kind, idx))
+        else:
+            groups.append({'start': s, 'end': e, 'items': [(kind, idx)]})
+
     combined = []
     used_brake, used_curve = set(), set()
-    for bi, (bs, be, _) in enumerate(brake_runs):
-        for ci, (cs, ce, _) in enumerate(curve_runs):
-            if bs <= ce and cs <= be:
-                combined.append((min(bs, cs), max(be, ce), 'FRENATA_CURVA'))
-                used_brake.add(bi)
-                used_curve.add(ci)
+    for g in groups:
+        kinds = {kind for kind, _ in g['items']}
+        if 'brake' in kinds and 'curve' in kinds:
+            combined.append((g['start'], g['end'], 'FRENATA_CURVA'))
+            for kind, idx in g['items']:
+                (used_brake if kind == 'brake' else used_curve).add(idx)
+
     brake_runs = [r for i, r in enumerate(brake_runs) if i not in used_brake]
     curve_runs = [r for i, r in enumerate(curve_runs) if i not in used_curve]
 
