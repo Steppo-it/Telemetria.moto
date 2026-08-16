@@ -1,9 +1,14 @@
 """Mappa statica Folium, colorata per velocità (spec sezione 10, punto 3a)."""
 import folium
+import numpy as np
 
 
 def _speed_to_color(speed, speed_min, speed_max):
-    """Gradiente blu (lento) -> verde -> giallo -> rosso (veloce), a 3 tratti lineari."""
+    """Gradiente blu (lento) -> verde -> giallo -> rosso (veloce), a 3 tratti lineari.
+    Restituisce un grigio neutro se `speed` non è un numero finito (es. GPS che non
+    riporta la velocità per quel fix) — non deve mai apparire come "il più veloce"."""
+    if not np.isfinite(speed):
+        return '#808080'
     if speed_max <= speed_min:
         ratio = 0.0
     else:
@@ -26,6 +31,10 @@ _EVENT_ICONS = {
 
 
 def build_static_map_html(df, events):
+    df = df.dropna(subset=['lat', 'lon']).reset_index(drop=True)
+    if len(df) == 0:
+        return '<p>Nessun dato GPS valido per la mappa.</p>'
+
     lat0, lon0 = float(df['lat'].iloc[0]), float(df['lon'].iloc[0])
     fmap = folium.Map(location=[lat0, lon0], zoom_start=15, tiles='OpenStreetMap')
 

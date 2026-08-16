@@ -24,3 +24,30 @@ def test_build_static_map_html_contains_map_markup(tmp_path):
     html = build_static_map_html(df, events)
     assert 'leaflet' in html.lower()
     assert len(html) > 500
+
+
+def test_speed_to_color_handles_nan():
+    color = _speed_to_color(float('nan'), 0, 100)
+    assert color == '#808080'
+
+
+def test_build_static_map_html_handles_nan_lat_lon(tmp_path):
+    csv_path = tmp_path / 'ride.csv'
+    make_ride_csv(csv_path, 'curve_clear_apex')
+    df = build_filtered_dataframe(compute_time_deltas(load_csv(str(csv_path))))
+    df.loc[2, 'lat'] = float('nan')
+    df.loc[2, 'lon'] = float('nan')
+    events = detect_events(df)
+    html = build_static_map_html(df, events)  # non deve sollevare eccezioni
+    assert len(html) > 0
+
+
+def test_build_static_map_html_all_nan_lat_lon_returns_placeholder(tmp_path):
+    csv_path = tmp_path / 'ride.csv'
+    make_ride_csv(csv_path, 'curve_clear_apex')
+    df = build_filtered_dataframe(compute_time_deltas(load_csv(str(csv_path))))
+    df['lat'] = float('nan')
+    df['lon'] = float('nan')
+    events = detect_events(df)
+    html = build_static_map_html(df, events)
+    assert 'Nessun dato GPS valido' in html
