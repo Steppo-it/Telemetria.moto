@@ -90,6 +90,17 @@ def filter_signal(df, signal_key, dt_s, near_gap, corroborated):
     status = np.empty(n, dtype=object)
 
     for i in range(n):
+        if pd.isna(raw_arr[i]):
+            # valore grezzo mancante nel CSV originale (es. sensore devicemotion
+            # non disponibile per l'intera sessione) — non c'e' nulla da filtrare
+            # e non va MAI riportato come attendibile (spec: taxonomy INVALID)
+            filtered[i] = float('nan')
+            confidence[i] = 0.0
+            flag[i] = 'RED'
+            reason[i] = 'valore mancante nel CSV originale (sensore non disponibile per questo campione)'
+            status[i] = 'INVALID'
+            continue
+
         is_ambiguous = bool(pitch_ambiguous_mask[i])
         z_i = z_arr[i]
         rate_i = bool(rate_exceeded_arr[i])

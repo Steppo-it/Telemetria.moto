@@ -61,3 +61,46 @@ def test_build_filtered_dataframe_pitch_ambiguous_keeps_raw_and_is_yellow():
     assert out['pitch_flag'].iloc[5] == 'YELLOW'
     assert out['pitch_filtered'].iloc[5] == out['pitch_deg'].iloc[5]
     assert 'POSSIBILE EVENTO REALE' in out['pitch_reason'].iloc[5]
+
+def test_filter_signal_marks_entirely_missing_column_as_invalid():
+    n = 10
+    start = pd.Timestamp('2026-08-16T10:00:00Z')
+    df = pd.DataFrame({
+        'timestamp': [start + pd.Timedelta(seconds=i) for i in range(n)],
+        'lat': [45.0] * n, 'lon': [9.0 + i * 0.0001 for i in range(n)],
+        'speed_kmh': [40.0] * n, 'heading_deg': [90.0] * n,
+        'lean_deg': [15.0] * n, 'pitch_deg': [0.0] * n,
+        'accel_fwd_g': [float('nan')] * n,  # sensore mai disponibile in tutta la sessione
+        'accel_lat_g': [0.05] * n, 'accel_vert_g': [0.02] * n,
+        'comfort_idx': [90.0] * n, 'score': [80.0] * n,
+    })
+    df = compute_time_deltas(df)
+    out = build_filtered_dataframe(df)
+    assert (out['accel_fwd_flag'] == 'RED').all()
+    assert (out['accel_fwd_status'] == 'INVALID').all()
+    assert (out['accel_fwd_confidence'] == 0.0).all()
+    assert out['accel_fwd_filtered'].isna().all()
+    # gli altri segnali, con dati validi, NON devono essere influenzati
+    assert (out['accel_lat_flag'] == 'GREEN').all()
+
+def test_filter_signal_marks_isolated_missing_sample_as_invalid():
+    n = 10
+    start = pd.Timestamp('2026-08-16T10:00:00Z')
+    lean_values = [15.0] * n
+    lean_values[5] = float('nan')  # un solo campione mancante, non l'intera colonna
+    df = pd.DataFrame({
+        'timestamp': [start + pd.Timedelta(seconds=i) for i in range(n)],
+        'lat': [45.0] * n, 'lon': [9.0 + i * 0.0001 for i in range(n)],
+        'speed_kmh': [40.0] * n, 'heading_deg': [90.0] * n,
+        'lean_deg': lean_values, 'pitch_deg': [0.0] * n,
+        'accel_fwd_g': [0.05] * n, 'accel_lat_g': [0.05] * n, 'accel_vert_g': [0.02] * n,
+        'comfort_idx': [90.0] * n, 'score': [80.0] * n,
+    })
+    df = compute_time_deltas(df)
+    out = build_filtered_dataframe(df)
+    assert out['lean_status'].iloc[5] == 'INVALID'
+    assert out['lean_flag'].iloc[5] == 'RED'
+    assert pd.isna(out['lean_filtered'].iloc[5])
+    # i campioni intorno, con dati validi, restano GREEN (non contaminati dal vicino NaN)
+    assert out['lean_status'].iloc[0] == 'MEASURED'
+    assert out['lean_status'].iloc[9] == 'MEASURED'

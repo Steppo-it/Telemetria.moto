@@ -43,3 +43,22 @@ def test_cli_end_to_end_produces_all_outputs(tmp_path):
     curves_df = pd.read_csv(curves_path)
     assert 'event_type' in events_df.columns
     assert 'apex_status' in curves_df.columns
+
+
+def test_cli_accepts_custom_config_override(tmp_path):
+    csv_path = tmp_path / 'ride.csv'
+    make_full_ride_csv(csv_path)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    custom_config_path = tmp_path / 'custom_config.py'
+    custom_config_path.write_text('FLAG_GREEN_MIN = 99\nFLAG_YELLOW_MIN = 90\n')
+
+    result = subprocess.run(
+        [sys.executable, os.path.join(project_root, 'telemetry_analyzer.py'),
+         str(csv_path), '--outdir', str(tmp_path), '--config', str(custom_config_path)],
+        capture_output=True, text=True, cwd=project_root,
+    )
+    assert result.returncode == 0, result.stderr
+    assert 'FLAG_GREEN_MIN' in result.stdout
+    filtered_df = pd.read_csv(tmp_path / 'filtered_telemetry.csv')
+    assert 'lean_flag' in filtered_df.columns

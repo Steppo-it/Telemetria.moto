@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI: python telemetry_analyzer.py file.csv [--outdir DIR]"""
+"""CLI: python telemetry_analyzer.py file.csv [--outdir DIR] [--config path/to/config.py]"""
 import argparse
 import os
 import sys
@@ -17,10 +17,25 @@ def main():
     parser = argparse.ArgumentParser(description='Analizza un CSV di telemetria TELAMETRIA.')
     parser.add_argument('csv_path', help='Percorso al CSV esportato dalla PWA')
     parser.add_argument('--outdir', default=None, help='Cartella di output (default: stessa del CSV)')
+    parser.add_argument('--config', default=None, help='Percorso a un file Python con soglie/pesi personalizzati che sovrascrivono analyzer/config.py')
     args = parser.parse_args()
 
     outdir = args.outdir or os.path.dirname(os.path.abspath(args.csv_path)) or '.'
     os.makedirs(outdir, exist_ok=True)
+
+    if args.config:
+        import importlib.util
+        from analyzer import config as analyzer_config
+        spec = importlib.util.spec_from_file_location('custom_telemetry_config', args.config)
+        custom_config = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(custom_config)
+        overridden = []
+        for name in dir(custom_config):
+            if not name.startswith('_'):
+                setattr(analyzer_config, name, getattr(custom_config, name))
+                overridden.append(name)
+        if overridden:
+            print(f'Config personalizzata caricata da {args.config}: {", ".join(sorted(overridden))}')
 
     print(f'Carico {args.csv_path}...')
     df = compute_time_deltas(load_csv(args.csv_path))
