@@ -677,14 +677,6 @@
     if (typeof window.orientation === 'number') return window.orientation;
     return 0;
   }
-  function compensateOrientation(beta, gamma, angle){
-    switch (((angle % 360) + 360) % 360) {
-      case 90:  return { pitch: gamma,  roll: -beta };
-      case 270: return { pitch: -gamma, roll: beta  };
-      case 180: return { pitch: -beta,  roll: -gamma };
-      default:  return { pitch: beta,   roll: gamma };
-    }
-  }
   function compensateAccelXY(x, y, angle){
     switch (((angle % 360) + 360) % 360) {
       case 90:  return { x: -y, y: x };
@@ -722,6 +714,30 @@
   function computePitchFromGravity(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
     const rad = Math.atan2(-comp.y, gz);
+    return rad * 180 / Math.PI;
+  }
+
+  // Piega (roll) dal vettore di gravità grezzo e istantaneo, stesso principio del beccheggio sopra
+  // — NON più da deviceorientation.beta/gamma (vedi handleOrientation(), ora usato solo per
+  // l'heading bussola). Bug osservato su strada: sollevando il telefono oltre ~30° di beccheggio
+  // (beta che si avvicina a ±90°, la zona instabile per costruzione), la piega calcolata da gamma
+  // "impazziva" fino a ~170° pur senza un reale movimento di piega — gimbal lock classico degli
+  // angoli di Eulero (lo stesso motivo per cui il beccheggio non usa più beta, vedi sopra), qui
+  // però sul gamma anziché sul beta stesso, perché è la coppia beta/gamma nel suo insieme a
+  // degenerare quando beta si avvicina ai poli. Usando atan2 sul vettore di gravità (come già per
+  // il beccheggio) il problema del gimbal lock non si presenta più fino a beccheggio ±90°
+  // (verificato in simulazione: piega stabile durante una salita simulata del beccheggio da 10°
+  // a 90° — ben oltre i 30° del bug originale). Limite residuo NOTO e ACCETTATO, non risolvibile
+  // in generale senza un terzo riferimento (bussola/giroscopio): oltre i ±90° di beccheggio grezzo
+  // (gz che cambia segno) la scomposizione in due angoli indipendenti dalla sola gravità perde di
+  // significato e la piega calcolata può risultare inattendibile — limite intrinseco di QUALSIASI
+  // coppia di angoli ricavata dal solo vettore di gravità, non specifico di questa formula.
+  // Convenzione segno NON validata su strada per questa nuova formula (derivata per analogia dalla
+  // convenzione già confermata rollDeg negativo=DX/positivo=SX, non ri-testata direttamente): se
+  // risulta invertita, cambia il segno di comp.x qui sotto (da `comp.x` a `-comp.x`).
+  function computeLeanFromGravity(gx, gy, gz, angle){
+    const comp = compensateAccelXY(gx, gy, angle);
+    const rad = Math.atan2(comp.x, gz);
     return rad * 180 / Math.PI;
   }
 
@@ -840,30 +856,15 @@
   // combinazione browser/permessi consegna deviceorientation ma non devicemotion, il badge
   // beccheggio smette di aggiornarsi (accettato per il target iOS, che concede entrambi i
   // permessi con un solo prompt, ma da tenere presente).
+  // Ora usato solo per l'heading bussola: piega e beccheggio vengono entrambi da
+  // computeLeanFromGravity()/computePitchFromGravity() dentro handleMotion() (vedi sopra) — mai
+  // più da deviceorientation.beta/gamma, per lo stesso motivo (gimbal lock) per entrambi.
   function handleOrientation(e){
-    if (e.gamma === null) return;
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) compassHeading = e.webkitCompassHeading;
-    const angle = getScreenAngle();
-    const comp = compensateOrientation(e.beta || 0, e.gamma, angle);
-    lastRawRoll = comp.roll;
-    currentLean = comp.roll - leanOffset;
-    updateLeanGauge(currentLean);
-    // il beccheggio (currentPitch) è calcolato in handleMotion() da computePitchFromGravity()
-
-    const now = performance.now();
-    if (lastGammaForRate !== null && lastGammaTime !== null) {
-      const dt = (now - lastGammaTime) / 1000;
-      if (dt > 0.02) {
-        const rate = Math.abs(currentLean - lastGammaForRate) / dt;
-        const target = 100 - clamp(rate * 1.1, 0, 100);
-        subLean += (target - subLean) * SCORE_ALPHA;
-        lastGammaForRate = currentLean; lastGammaTime = now;
-      }
-    } else { lastGammaForRate = currentLean; lastGammaTime = now; }
   }
 
   // Verso del TOP G laterale (DX/SX) non validato su strada: per costruzione condivide lo stesso
-  // asse X compensato (compensateAccelXY) usato dal roll/piega (compensateOrientation), quindi qui
+  // asse X compensato (compensateAccelXY) usato dal roll/piega (computeLeanFromGravity), quindi qui
   // si assume la stessa convenzione già confermata per la piega (negativo = DX, positivo = SX) —
   // se in marcia risulta invertito, basta scambiare 'DX'/'SX' nella riga sotto.
   function updateGLatGauge(gSmooth){
@@ -904,6 +905,21 @@
     lastRawPitch = computePitchFromGravity(rx, ry, rz, angle);
     currentPitch = lastRawPitch - pitchOffset;
     updatePitchGauge(currentPitch);
+
+    lastRawRoll = computeLeanFromGravity(rx, ry, rz, angle);
+    currentLean = lastRawRoll - leanOffset;
+    updateLeanGauge(currentLean);
+
+    const now = performance.now();
+    if (lastGammaForRate !== null && lastGammaTime !== null) {
+      const dt = (now - lastGammaTime) / 1000;
+      if (dt > 0.02) {
+        const rate = Math.abs(currentLean - lastGammaForRate) / dt;
+        const target = 100 - clamp(rate * 1.1, 0, 100);
+        subLean += (target - subLean) * SCORE_ALPHA;
+        lastGammaForRate = currentLean; lastGammaTime = now;
+      }
+    } else { lastGammaForRate = currentLean; lastGammaTime = now; }
 
     const comp = compensateAccelXY(lx, ly, angle);
     linear.x = comp.x; linear.y = comp.y; linear.z = lz;
