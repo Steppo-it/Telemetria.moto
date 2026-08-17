@@ -239,10 +239,22 @@
   .lean-bike-wrap { display:flex; justify-content:center; flex:1 1 auto; align-items:center; min-height:0; }
   .lean-bike-icon { width:auto; height:100%; max-height:64px; }
   .lean-bike-icon .ground { stroke: var(--hair); stroke-width:2; }
-  .lean-bike-icon .frame { stroke: var(--ink); stroke-width:3; stroke-linecap:round; fill:none; }
+  /* Pneumatico invece della sagoma moto (era troppo stilizzata/poco leggibile): battistrada
+     tratteggiato (anello esterno) + fianco (anello interno) + razze/mozzo, ruota tutta insieme
+     intorno al punto di contatto col terreno — stessa logica di rotazione di prima. */
+  .lean-bike-icon .tire-tread { fill:none; stroke: var(--ink); stroke-width:4; stroke-dasharray:3.5 3; }
+  .lean-bike-icon .tire-body { fill:none; stroke: var(--ink); stroke-width:2; }
+  .lean-bike-icon .tire-spoke { stroke: var(--ink-dim); stroke-width:1.5; }
+  .lean-bike-icon .tire-hub { fill: var(--ink); }
 
   /* ============ gauge trasferimento carico (sostituisce G Laterale + G Longitudinale) ============ */
-  .load-gauge { position:relative; flex:1 1 auto; min-height:0; aspect-ratio:1/1; max-width:100%; max-height:100%; margin:4px auto; border:1px solid var(--panel-edge); border-radius:50%; background: var(--hair); }
+  /* flex:0 0 auto (non "1 1 auto"): con "1 1 auto" dentro una colonna flex, il gauge si allargava
+     in altezza per riempire lo slot destro (ora a tutta altezza, molto più alto che largo) prima
+     che aspect-ratio potesse tenere il passo — risultato: un'ellisse invece di un cerchio. Con
+     "0 0 auto" la dimensione è governata solo da width + aspect-ratio, sempre un quadrato/cerchio
+     vero; lo spazio verticale in eccesso nella card resta vuoto sopra/sotto (centrato da
+     .stat-card { justify-content:center }, non un problema). */
+  .load-gauge { position:relative; flex:0 0 auto; width:100%; max-width:150px; aspect-ratio:1/1; margin:4px auto; border:1px solid var(--panel-edge); border-radius:50%; background: var(--hair); }
   .load-gauge-line { position:absolute; background: var(--panel-edge); }
   .load-gauge-line-h { left:6%; right:6%; top:50%; height:1px; }
   .load-gauge-line-v { top:6%; bottom:6%; left:50%; width:1px; }
@@ -318,9 +330,11 @@
         <svg class="lean-bike-icon" viewBox="0 0 60 60">
           <line class="ground" x1="4" y1="52" x2="56" y2="52"/>
           <g id="leanBikeIcon" style="transform-origin:30px 52px;">
-            <circle class="frame" cx="30" cy="46" r="8"/>
-            <line class="frame" x1="30" y1="38" x2="30" y2="14"/>
-            <line class="frame" x1="19" y1="16" x2="41" y2="16"/>
+            <circle class="tire-tread" cx="30" cy="34" r="17"/>
+            <circle class="tire-body" cx="30" cy="34" r="13"/>
+            <line class="tire-spoke" x1="30" y1="23" x2="30" y2="45"/>
+            <line class="tire-spoke" x1="19" y1="34" x2="41" y2="34"/>
+            <circle class="tire-hub" cx="30" cy="34" r="3"/>
           </g>
         </svg>
       </div>
@@ -396,7 +410,7 @@
   // distinguere "il fix non ha funzionato" da "sto ancora vedendo una pagina in cache" (iOS
   // Safari cachea aggressivamente, specie se l'app è stata aggiunta alla schermata Home) —
   // fonte di confusione già capitata durante il debug di piega/beccheggio.
-  const BUILD_VERSION = '2026-08-17-axis-swap-realtime';
+  const BUILD_VERSION = '2026-08-17-axis-swap-fix2-tire';
   const $ = id => document.getElementById(id);
   const leanNumBig = $('leanNumBig'), leanSub = $('leanSub'), leanBikeIcon = $('leanBikeIcon');
   const leanMaxSxEl = $('leanMaxSx'), leanMaxDxEl = $('leanMaxDx');
@@ -754,83 +768,45 @@
     }
   }
 
-  // Beccheggio dal vettore di gravità GREZZO E ISTANTANEO (rx,ry,rz da accelerationIncludingGravity),
-  // MAI dal vettore filtrato gEst: gEst è un filtro passa-basso pensato per stimare la gravità "a
-  // riposo" e sottrarla dall'accelerazione lineare (vedi handleMotion). Durante un'inclinazione
-  // SOSTENUTA (es. impennata tenuta per più di un istante) gEst finisce per "inseguire" la nuova
-  // inclinazione trattandola come nuova gravità di riferimento — il beccheggio calcolato scende
-  // verso 0 anche se il telefono resta inclinato, per poi ripartire da capo se l'inclinazione
-  // continua ad aumentare (bug osservato: sale fino a ~44°, scende a 0, riparte da 1-2-3...).
-  // Usando il vettore grezzo il problema non si presenta: la lettura riflette sempre l'inclinazione
-  // istantanea reale.
-  // atan2 (invece di deviceorientation.beta) resta comunque necessario: beta è un angolo di Eulero e
-  // soffre di gimbal lock/salti oltre ~90° (es. ~-350° durante un'impennata), mentre atan2 su due
-  // componenti del vettore di gravità resta continuo su tutto l'intervallo.
-  // Formula: atan2(-comp.y, gz) — due componenti CON SEGNO, non atan2(-comp.y, sqrt(comp.x²+gz²))
-  // come in una prima versione. La versione con sqrt() (denominatore sempre >= 0) è il classico
-  // "pitch indipendente dal roll" da manualistica IMU, ma per costruzione satura a ±90°: oltre
-  // quel punto il valore torna a scendere invece di continuare a salire (bug osservato su strada:
-  // sale fino a un certo angolo, poi scende man mano che l'inclinazione REALE continua ad
-  // aumentare). Con un supporto che monta il telefono già inclinato di suo rispetto al terreno
-  // (es. su un cupolino, ~60° dalla orizzontale), l'inclinazione di riposo consuma già buona parte
-  // dei ±90° disponibili PRIMA della calibrazione, quindi il punto di saturazione si raggiunge con
-  // un'inclinazione reale della moto tutt'altro che estrema (~40° nel caso osservato). La versione
-  // a due argomenti CON segno resta continua su tutto l'intervallo ±180°, qualunque sia l'angolo di
-  // montaggio — al costo di non essere più perfettamente indipendente dal roll in caso di piega e
-  // beccheggio estremi contemporanei (scenario raro e comunque non peggiore delle altre stime di
-  // questa sezione, già descritte come approssimazioni).
-  // Round 4 — scambiato con la piega: vedi commento su computeLeanFromGravity() sotto per i
-  // dettagli. Prima leggeva `comp.y`, ora legge `comp.x` — stessa forma di formula (due argomenti
-  // con segno, range esteso ±180° per permettere impennate), solo asse diverso.
-  function computePitchFromGravity(gx, gy, gz, angle){
+  // Le due funzioni sotto NON si chiamano più "computePitchFromGravity"/"computeLeanFromGravity":
+  // calcolano un angolo da un asse compensato specifico, a prescindere da quale card (piega o
+  // beccheggio) ne mostra il risultato — l'assegnazione asse→card è decisa in handleMotion() (vedi
+  // Round 5 sotto). Motivo del cambio di nome: il Round 4 aveva scambiato quale asse alimenta quale
+  // FORMULA (mantenendo i nomi "pitch"/"lean" attaccati alla forma della formula), il che ha rotto
+  // tutto — vedi Round 5 per i dettagli. Con nomi neutri, il rischio di ripetere quell'errore è
+  // strutturalmente più basso.
+  //
+  // Storia (perché queste due forme di formula, e perché sono legate proprio a QUESTI assi):
+  // beccheggio/piega erano letti da deviceorientation beta/gamma in origine — angoli di Eulero,
+  // soggetti a gimbal lock/salti discontinui vicino ai poli. Sostituiti da atan2 sul vettore di
+  // gravità grezzo (mai su gEst, il filtro passa-basso: durante un'inclinazione sostenuta gEst
+  // "insegue" la nuova inclinazione trattandola come gravità di riferimento, facendo scendere
+  // l'angolo verso 0 anche se il telefono resta inclinato — bug osservato, vedi git log). Con QUESTO
+  // montaggio (cupolino, ~60° dalla orizzontale) i due assi compensati si comportano in modo
+  // opposto: uno (Y) ha un valore di riposo che consuma gran parte del range ±90° di una formula
+  // "sqrt-bounded" (sature presto, Round 1); l'altro (X) ha un valore di riposo vicino al punto di
+  // wraparound ±180° di una formula "a due argomenti con segno" (instabile lì, Round 2). Le due
+  // forme di formula sono quindi scelte per compensare CIASCUNA il difetto specifico del proprio
+  // asse — scambiarle tra loro (Round 4) reintroduce entrambi i bug, solo su etichette diverse.
+  function computeAngleExtY(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
-    const rad = Math.atan2(-comp.x, gz);
+    const rad = Math.atan2(-comp.y, gz);
+    return rad * 180 / Math.PI;
+  }
+  function computeAngleBoundedX(gx, gy, gz, angle){
+    const comp = compensateAccelXY(gx, gy, angle);
+    const rad = Math.atan2(comp.x, Math.sqrt(comp.y * comp.y + gz * gz));
     return rad * 180 / Math.PI;
   }
 
-  // Piega (roll) dal vettore di gravità grezzo e istantaneo, stesso principio del beccheggio sopra
-  // — NON più da deviceorientation.beta/gamma (vedi handleOrientation(), ora usato solo per
-  // l'heading bussola). Bug osservato su strada: sollevando il telefono oltre ~30° di beccheggio
-  // "impazziva" fino a ~170° pur senza un reale movimento di piega — gimbal lock classico degli
-  // angoli di Eulero (lo stesso motivo per cui il beccheggio non usa più beta, vedi sopra).
-  //
-  // Prima versione di questa funzione (atan2(comp.x, gz), due argomenti CON segno come il
-  // beccheggio): risolveva il gimbal lock di beta/gamma ma introduceva un problema equivalente
-  // per un'altra via — con un supporto che monta il telefono già molto inclinato di suo (es. su
-  // un cupolino, ~60° dalla orizzontale), la componente Z grezza del sensore a riposo è già
-  // piccola (non ~9.8 come per un telefono piatto), e bastano ~30° di beccheggio REALE aggiuntivo
-  // per farla passare per zero — proprio la soglia osservata nel bug. In quella zona atan2(x,z)
-  // diventa instabile: piccoli movimenti reali producono salti enormi nel risultato, perché sia x
-  // che z si avvicinano contemporaneamente a zero.
-  // Fix: usare Math.sqrt(comp.y² + gz²) come secondo argomento invece del solo gz — la stessa
-  // tecnica "indipendente dal beccheggio" già scartata per il beccheggio stesso (lì serviva
-  // l'opposto: un intervallo esteso, non una lettura stabile rispetto all'altro asse). Qui invece
-  // è la scelta giusta: quel denominatore resta vicino alla norma piena di gravità (~9.8)
-  // qualunque sia il beccheggio, perché il beccheggio sposta la gravità DENTRO il piano Y-Z senza
-  // farla uscire — non si avvicina mai a zero per un beccheggio puro, a differenza del solo gz.
-  // Come contropartita la piega torna limitata a ±90° (accettabile: una moto non piega oltre
-  // l'orizzontale in condizioni normali, a differenza del beccheggio durante un'impennata).
-  // Verificato numericamente con un montaggio di base a 60° e beccheggio reale crescente: la
-  // vecchia formula salta da 15° a -165° esattamente al superamento dei 30° aggiuntivi (bug
-  // riprodotto); la nuova resta stabile vicino al valore reale per l'intero intervallo testato.
-  // Convenzione segno NON validata su strada per questa nuova formula (derivata per analogia dalla
-  // convenzione già confermata rollDeg negativo=DX/positivo=SX, non ri-testata direttamente): se
-  // risulta invertita, cambia il segno di comp.y qui sotto (da `comp.y` a `-comp.y`).
-  //
-  // Round 4 — piega e beccheggio erano scambiati: dopo il deploy fermo per giorni (vedi CLAUDE.md,
-  // sezione Deploy), il primo test reale su un deploy effettivamente aggiornato ha mostrato che
-  // muovere il telefono in beccheggio faceva reagire la card Piega e viceversa — ma SENZA i salti/
-  // saturazioni dei round precedenti, quindi il problema era solo "quale asse compensato va a quale
-  // card", non la stabilità delle formule. Scambiati gli assi: prima questa funzione leggeva
-  // `comp.x` (con `Math.sqrt(comp.y²+gz²)` come secondo argomento), ora legge `comp.y` (con
-  // `Math.sqrt(comp.x²+gz²)`) — le FORME delle due formule (questa: sqrt-bounded ±90°; il
-  // beccheggio sotto: due argomenti con segno, range esteso) non sono cambiate, solo quale asse
-  // compensato alimenta quale. Non validato su strada al momento di questo commit — prima verifica
-  // reale su un deploy che funziona davvero.
-  function computeLeanFromGravity(gx, gy, gz, angle){
-    const comp = compensateAccelXY(gx, gy, angle);
-    const rad = Math.atan2(comp.y, Math.sqrt(comp.x * comp.x + gz * gz));
-    return rad * 180 / Math.PI;
+  // Normalizza una differenza di angoli nell'intervallo (-180, 180]. Necessario per
+  // `currentX = rawX - offsetX`: se il valore grezzo e l'offset di calibrazione finiscono su lati
+  // opposti del punto di wraparound di atan2 (±180°) — può succedere con un montaggio che riposa
+  // vicino a quel punto — la sottrazione ingenua produce un salto fino a ±360° invece del vero
+  // (piccolo) delta angolare. Applicata ad entrambi gli assi per sicurezza, anche se in pratica
+  // rilevante soprattutto per l'asse a range esteso (`computeAngleExtY`).
+  function normalizeAngleDiff(deg){
+    return ((deg + 180) % 360 + 360) % 360 - 180;
   }
 
   // Soglie minime di attivazione ("deadzone") — sotto questi valori il dato viene mostrato come
@@ -849,11 +825,10 @@
   let lastRawRollClampTime = null;
   // Limite di plausibilità fisica (non un dato scientifico): una moto non può cambiare piega di
   // decine/centinaia di gradi in una frazione di secondo. Rete di sicurezza indipendente dalla
-  // causa esatta di un eventuale salto nella lettura grezza (due tentativi di correggere la
-  // formula a monte — computeLeanFromGravity() — non hanno eliminato salti osservati su strada
-  // in una zona vicina a beccheggio ~30° con un montaggio molto inclinato; questo limite li
-  // sopprime a valle qualunque sia la causa residua). 300°/s è generoso rispetto a qualunque
-  // piega reale in marcia normale, anche aggressiva.
+  // causa esatta di un eventuale salto nella lettura grezza — applicata alla card che in quel
+  // momento usa la formula a range esteso (vedi Round 5, handleMotion(): oggi la piega, prima del
+  // Round 5 era il beccheggio), l'unica delle due prona a un salto di wraparound. 300°/s è
+  // generoso rispetto a qualunque piega reale in marcia normale, anche aggressiva.
   const MAX_LEAN_RATE_DEG_S = 300;
   function clampImplausibleLeanJump(newVal, now){
     if (lastRawRollClampTime === null) { lastRawRollClampTime = now; return newVal; }
@@ -960,13 +935,13 @@
   }
 
   // Nota: il beccheggio NON viene più calcolato qui — dipende interamente dal fatto che
-  // devicemotion continui a scattare (vedi handleMotion()/computePitchFromGravity()). Se una
-  // combinazione browser/permessi consegna deviceorientation ma non devicemotion, il badge
-  // beccheggio smette di aggiornarsi (accettato per il target iOS, che concede entrambi i
-  // permessi con un solo prompt, ma da tenere presente).
+  // devicemotion continui a scattare (vedi handleMotion()). Se una combinazione browser/permessi
+  // consegna deviceorientation ma non devicemotion, il badge beccheggio smette di aggiornarsi
+  // (accettato per il target iOS, che concede entrambi i permessi con un solo prompt, ma da
+  // tenere presente).
   // Ora usato solo per l'heading bussola: piega e beccheggio vengono entrambi da
-  // computeLeanFromGravity()/computePitchFromGravity() dentro handleMotion() (vedi sopra) — mai
-  // più da deviceorientation.beta/gamma, per lo stesso motivo (gimbal lock) per entrambi.
+  // computeAngleExtY()/computeAngleBoundedX() dentro handleMotion() (vedi sopra) — mai più da
+  // deviceorientation.beta/gamma, per lo stesso motivo (gimbal lock) per entrambi.
   function handleOrientation(e){
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) compassHeading = e.webkitCompassHeading;
   }
@@ -979,8 +954,7 @@
   //    frenata il trasferimento di carico va in AVANTI, quindi la pallina sale verso l'alto
   //    (tag FRENATA) quando fwdG è negativo, scende verso il basso (tag ACCEL) quando è positivo.
   //  - gLat negativo=DX, positivo=SX (stessa convenzione di rollDeg, non validata
-  //    indipendentemente su strada — vedi computeLeanFromGravity) → la pallina va a destra
-  //    quando gLat è negativo.
+  //    indipendentemente su strada) → la pallina va a destra quando gLat è negativo.
   // Scale ±1.0g longitudinale e ±1.5g laterale (stesse già usate dalle vecchie barre), oltre le
   // quali la pallina resta ancorata al bordo del cerchio invece di uscirne.
   //
@@ -1037,13 +1011,18 @@
 
     const angle = getScreenAngle();
 
-    lastRawPitch = computePitchFromGravity(rx, ry, rz, angle);
-    currentPitch = lastRawPitch - pitchOffset;
+    // Round 5 — assegnazione asse→card corretta (vedi commento sopra computeAngleExtY/
+    // computeAngleBoundedX): il beccheggio usa l'asse "bounded" (comp.x), la piega l'asse "esteso"
+    // (comp.y) — l'OPPOSTO di come erano assegnati prima del Round 4 E di come li aveva riassegnati
+    // il Round 4 stesso. Entrambe le sottrazioni offset passano da normalizeAngleDiff() per
+    // sicurezza (vedi sopra).
+    lastRawPitch = computeAngleBoundedX(rx, ry, rz, angle);
+    currentPitch = normalizeAngleDiff(lastRawPitch - pitchOffset);
     updatePitchGauge(currentPitch);
 
     const now = performance.now();
-    lastRawRoll = clampImplausibleLeanJump(computeLeanFromGravity(rx, ry, rz, angle), now);
-    currentLean = lastRawRoll - leanOffset;
+    lastRawRoll = clampImplausibleLeanJump(computeAngleExtY(rx, ry, rz, angle), now);
+    currentLean = normalizeAngleDiff(lastRawRoll - leanOffset);
     updateLeanGauge(currentLean);
 
     if (lastGammaForRate !== null && lastGammaTime !== null) {
@@ -1280,9 +1259,10 @@
     leanOffset = lastRawRoll;
     if (lastRawAG) {
       gEst.x = lastRawAG.x; gEst.y = lastRawAG.y; gEst.z = lastRawAG.z;
-      // Offset di beccheggio dal vettore grezzo lastRawAG, non da gEst: il beccheggio (vedi
-      // computePitchFromGravity) è ormai calcolato sempre dal vettore grezzo, mai da gEst.
-      pitchOffset = computePitchFromGravity(lastRawAG.x, lastRawAG.y, lastRawAG.z, getScreenAngle());
+      // Offset di beccheggio dal vettore grezzo lastRawAG, non da gEst: il beccheggio è ormai
+      // calcolato sempre dal vettore grezzo, mai da gEst. computeAngleBoundedX perché il
+      // beccheggio ora legge quell'asse (vedi Round 5, handleMotion()).
+      pitchOffset = computeAngleBoundedX(lastRawAG.x, lastRawAG.y, lastRawAG.z, getScreenAngle());
     } else {
       pitchOffset = lastRawPitch;
     }
