@@ -319,6 +319,7 @@
       <div class="settings-row"><span>Voce navigatore</span><button class="settings-toggle" id="voiceToggle">Attiva</button></div>
       <div class="settings-row"><span>Modalità modifica</span><button class="settings-toggle" id="editModeToggle">Disattiva</button></div>
       <div class="settings-row"><span>Chiudi</span><button class="settings-toggle" id="controlClose">OK</button></div>
+      <div class="settings-row" style="opacity:.5; font-size:10px;"><span>Versione</span><span id="buildVersion"></span></div>
     </div>
   </div>
 
@@ -345,6 +346,11 @@
 
 <script>
 (function(){
+  // Marcatore build, visibile in Impostazioni: aggiornare ad ogni commit rilevante. Serve a
+  // distinguere "il fix non ha funzionato" da "sto ancora vedendo una pagina in cache" (iOS
+  // Safari cachea aggressivamente, specie se l'app è stata aggiunta alla schermata Home) —
+  // fonte di confusione già capitata durante il debug di piega/beccheggio.
+  const BUILD_VERSION = '2026-08-17-lean-clamp';
   const $ = id => document.getElementById(id);
   const leanNumBig = $('leanNumBig'), leanSub = $('leanSub'), leanBarFill = $('leanBarFill');
   const leanMaxSxEl = $('leanMaxSx'), leanMaxDxEl = $('leanMaxDx');
@@ -364,6 +370,8 @@
   const cardLean = $('cardLean'), cardPitch = $('cardPitch'), cardGLat = $('cardGLat'), cardGLong = $('cardGLong');
   const controlPanel = $('controlPanel'), controlBackdrop = $('controlBackdrop'), controlClose = $('controlClose');
   const themeToggle = $('themeToggle'), editModeToggle = $('editModeToggle');
+  const buildVersionEl = $('buildVersion');
+  if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
   const appEl = document.querySelector('.app');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
   const mapRecenterBtn = $('mapRecenterBtn');
@@ -769,6 +777,25 @@
   let currentLean = 0, currentPitch = 0;
   let lastRawRoll = 0, lastRawPitch = 0;
   let leanOffset = 0, pitchOffset = 0;
+  let lastRawRollClampTime = null;
+  // Limite di plausibilità fisica (non un dato scientifico): una moto non può cambiare piega di
+  // decine/centinaia di gradi in una frazione di secondo. Rete di sicurezza indipendente dalla
+  // causa esatta di un eventuale salto nella lettura grezza (due tentativi di correggere la
+  // formula a monte — computeLeanFromGravity() — non hanno eliminato salti osservati su strada
+  // in una zona vicina a beccheggio ~30° con un montaggio molto inclinato; questo limite li
+  // sopprime a valle qualunque sia la causa residua). 300°/s è generoso rispetto a qualunque
+  // piega reale in marcia normale, anche aggressiva.
+  const MAX_LEAN_RATE_DEG_S = 300;
+  function clampImplausibleLeanJump(newVal, now){
+    if (lastRawRollClampTime === null) { lastRawRollClampTime = now; return newVal; }
+    const dt = (now - lastRawRollClampTime) / 1000;
+    lastRawRollClampTime = now;
+    if (dt <= 0) return lastRawRoll;
+    const maxDelta = MAX_LEAN_RATE_DEG_S * dt;
+    const delta = newVal - lastRawRoll;
+    if (Math.abs(delta) > maxDelta) return lastRawRoll + Math.sign(delta) * maxDelta;
+    return newVal;
+  }
   let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0, maxGLat = 0, maxGLong = 0;
   let watchId = null;
   function ensureGps(){
@@ -916,11 +943,11 @@
     currentPitch = lastRawPitch - pitchOffset;
     updatePitchGauge(currentPitch);
 
-    lastRawRoll = computeLeanFromGravity(rx, ry, rz, angle);
+    const now = performance.now();
+    lastRawRoll = clampImplausibleLeanJump(computeLeanFromGravity(rx, ry, rz, angle), now);
     currentLean = lastRawRoll - leanOffset;
     updateLeanGauge(currentLean);
 
-    const now = performance.now();
     if (lastGammaForRate !== null && lastGammaTime !== null) {
       const dt = (now - lastGammaTime) / 1000;
       if (dt > 0.02) {
