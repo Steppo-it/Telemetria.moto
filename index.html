@@ -251,7 +251,14 @@
   .load-gauge-tag-bottom { bottom:3px; left:50%; transform:translateX(-50%); }
   .load-gauge-tag-left { left:4px; top:50%; transform:translateY(-50%); }
   .load-gauge-tag-right { right:4px; top:50%; transform:translateY(-50%); }
-  .load-gauge-ball { position:absolute; width:16px; height:16px; border-radius:50%; background: var(--blue-glow); box-shadow: 0 0 10px 2px rgba(92,200,255,.6); left:50%; top:50%; transform:translate(-50%,-50%); transition: left .08s linear, top .08s linear; }
+  /* Nessuna transition sulla pallina live: deve inseguire il G istantaneo senza ritardo
+     percepibile ("in tempo reale, altrimenti non serve" — richiesta esplicita). */
+  .load-gauge-ball { position:absolute; width:16px; height:16px; border-radius:50%; background: var(--blue-glow); box-shadow: 0 0 10px 2px rgba(92,200,255,.6); left:50%; top:50%; transform:translate(-50%,-50%); z-index:2; }
+  /* Marcatore di picco: anello vuoto sovraimpresso, resta dove è stato il G massimo raggiunto
+     (stesso dato di TOP LAT/TOP LONG nella riga sotto) finché non si preme Reset max — la
+     pallina piena (sopra) resta sempre quella "adesso". */
+  .load-gauge-peak { position:absolute; width:14px; height:14px; border-radius:50%; border:2px solid var(--amber); background:transparent; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1; opacity:0; }
+  .load-gauge-peak.show { opacity:.85; }
 </style>
 </head>
 <body>
@@ -338,6 +345,7 @@
         <div class="load-gauge-tag load-gauge-tag-bottom">ACCEL</div>
         <div class="load-gauge-tag load-gauge-tag-left">SX</div>
         <div class="load-gauge-tag load-gauge-tag-right">DX</div>
+        <div class="load-gauge-peak" id="loadPeak"></div>
         <div class="load-gauge-ball" id="loadBall"></div>
       </div>
       <div class="stat-maxrow"><span>TOP LONG <b id="gLongTop">0.00g</b></span><span>TOP LAT <b id="gLatTop">0.00g</b></span></div>
@@ -388,13 +396,13 @@
   // distinguere "il fix non ha funzionato" da "sto ancora vedendo una pagina in cache" (iOS
   // Safari cachea aggressivamente, specie se l'app è stata aggiunta alla schermata Home) —
   // fonte di confusione già capitata durante il debug di piega/beccheggio.
-  const BUILD_VERSION = '2026-08-17-reachability';
+  const BUILD_VERSION = '2026-08-17-axis-swap-realtime';
   const $ = id => document.getElementById(id);
   const leanNumBig = $('leanNumBig'), leanSub = $('leanSub'), leanBikeIcon = $('leanBikeIcon');
   const leanMaxSxEl = $('leanMaxSx'), leanMaxDxEl = $('leanMaxDx');
   const pitchNumBig = $('pitchNumBig'), pitchSub = $('pitchSub'), pitchBarFill = $('pitchBarFill');
   const pitchMaxUpEl = $('pitchMaxUp'), pitchMaxDownEl = $('pitchMaxDown');
-  const loadBall = $('loadBall'), gLatTopEl = $('gLatTop'), gLongTopEl = $('gLongTop');
+  const loadBall = $('loadBall'), loadPeak = $('loadPeak'), gLatTopEl = $('gLatTop'), gLongTopEl = $('gLongTop');
   const miniMainBtn = $('miniMainBtn'), miniMenuBtn = $('miniMenuBtn'), miniCalibBtn = $('miniCalibBtn');
   let recording = false;
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn'), resetMaxBtn = $('resetMaxBtn');
@@ -771,9 +779,12 @@
   // montaggio — al costo di non essere più perfettamente indipendente dal roll in caso di piega e
   // beccheggio estremi contemporanei (scenario raro e comunque non peggiore delle altre stime di
   // questa sezione, già descritte come approssimazioni).
+  // Round 4 — scambiato con la piega: vedi commento su computeLeanFromGravity() sotto per i
+  // dettagli. Prima leggeva `comp.y`, ora legge `comp.x` — stessa forma di formula (due argomenti
+  // con segno, range esteso ±180° per permettere impennate), solo asse diverso.
   function computePitchFromGravity(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
-    const rad = Math.atan2(-comp.y, gz);
+    const rad = Math.atan2(-comp.x, gz);
     return rad * 180 / Math.PI;
   }
 
@@ -804,17 +815,23 @@
   // riprodotto); la nuova resta stabile vicino al valore reale per l'intero intervallo testato.
   // Convenzione segno NON validata su strada per questa nuova formula (derivata per analogia dalla
   // convenzione già confermata rollDeg negativo=DX/positivo=SX, non ri-testata direttamente): se
-  // risulta invertita, cambia il segno di comp.x qui sotto (da `comp.x` a `-comp.x`).
+  // risulta invertita, cambia il segno di comp.y qui sotto (da `comp.y` a `-comp.y`).
+  //
+  // Round 4 — piega e beccheggio erano scambiati: dopo il deploy fermo per giorni (vedi CLAUDE.md,
+  // sezione Deploy), il primo test reale su un deploy effettivamente aggiornato ha mostrato che
+  // muovere il telefono in beccheggio faceva reagire la card Piega e viceversa — ma SENZA i salti/
+  // saturazioni dei round precedenti, quindi il problema era solo "quale asse compensato va a quale
+  // card", non la stabilità delle formule. Scambiati gli assi: prima questa funzione leggeva
+  // `comp.x` (con `Math.sqrt(comp.y²+gz²)` come secondo argomento), ora legge `comp.y` (con
+  // `Math.sqrt(comp.x²+gz²)`) — le FORME delle due formule (questa: sqrt-bounded ±90°; il
+  // beccheggio sotto: due argomenti con segno, range esteso) non sono cambiate, solo quale asse
+  // compensato alimenta quale. Non validato su strada al momento di questo commit — prima verifica
+  // reale su un deploy che funziona davvero.
   function computeLeanFromGravity(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
-    const rad = Math.atan2(comp.x, Math.sqrt(comp.y * comp.y + gz * gz));
+    const rad = Math.atan2(comp.y, Math.sqrt(comp.x * comp.x + gz * gz));
     return rad * 180 / Math.PI;
   }
-
-  // Valori G smussati (EMA) solo per barra/testo — separati dai grezzi fwdG/latG usati per il
-  // punteggio, così la lettura visiva è fluida senza cambiare la sensibilità del punteggio guida.
-  let gLongDisplay = 0, gLatDisplay = 0;
-  const G_DISPLAY_ALPHA = 0.12;
 
   // Soglie minime di attivazione ("deadzone") — sotto questi valori il dato viene mostrato come
   // esattamente zero invece del rumore residuo del sensore a moto ferma. `let` invece di `const`:
@@ -966,6 +983,19 @@
   //    quando gLat è negativo.
   // Scale ±1.0g longitudinale e ±1.5g laterale (stesse già usate dalle vecchie barre), oltre le
   // quali la pallina resta ancorata al bordo del cerchio invece di uscirne.
+  //
+  // Tempo reale: chiamata con gLat/gLong GREZZI (non smussati — vedi handleMotion), nessuna
+  // transition CSS sulla pallina (vedi .load-gauge-ball) — un gauge del genere è utile solo se
+  // segue il G istantaneo senza ritardo percepibile, richiesto esplicitamente dopo che la
+  // versione con media mobile esponenziale (`gLatDisplay`/`gLongDisplay`, rimossa) risultava
+  // troppo "gommosa". Il deadzone (sotto) resta per evitare che la pallina vibri da ferma per
+  // solo rumore sensori, non introduce ritardo percettibile.
+  //
+  // Sovraimpressione del picco (`#loadPeak`, anello vuoto colore ambra): posizionato sullo
+  // stesso G massimo con segno già tracciato da `maxGLat`/`maxGLong` per il TOP LAT/TOP LONG
+  // testuale sotto — nessun nuovo stato, solo una seconda resa visiva dello stesso dato.
+  // Aggiornato solo quando c'è un nuovo massimo (non ad ogni frame), resta fermo lì finché non
+  // si preme Reset max o si avvia una nuova sessione.
   function updateLoadGauge(gLat, gLong){
     if (Math.abs(gLat) < G_DEADZONE) gLat = 0;
     if (Math.abs(gLong) < G_DEADZONE) gLong = 0;
@@ -974,15 +1004,23 @@
     loadBall.style.left = xPct + '%';
     loadBall.style.top = yPct + '%';
 
+    let peakMoved = false;
     if (Math.abs(gLat) > Math.abs(maxGLat)) {
       maxGLat = gLat;
       const side = maxGLat < 0 ? 'DX' : 'SX';
       gLatTopEl.textContent = Math.abs(maxGLat).toFixed(2) + 'g ' + side;
+      peakMoved = true;
     }
     if (Math.abs(gLong) > Math.abs(maxGLong)) {
       maxGLong = gLong;
       const dir = maxGLong < 0 ? 'FRENATA' : 'ACCEL';
       gLongTopEl.textContent = Math.abs(maxGLong).toFixed(2) + 'g ' + dir;
+      peakMoved = true;
+    }
+    if (peakMoved) {
+      loadPeak.style.left = (50 - clamp(maxGLat / 1.5, -1, 1) * 40) + '%';
+      loadPeak.style.top = (50 + clamp(maxGLong / 1.0, -1, 1) * 40) + '%';
+      loadPeak.classList.add('show');
     }
   }
 
@@ -1022,9 +1060,7 @@
     linear.x = comp.x; linear.y = comp.y; linear.z = lz;
 
     const fwdG = linear.y / 9.81, latG = linear.x / 9.81, vertG = linear.z / 9.81;
-    gLongDisplay += (fwdG - gLongDisplay) * G_DISPLAY_ALPHA;
-    gLatDisplay += (latG - gLatDisplay) * G_DISPLAY_ALPHA;
-    updateLoadGauge(gLatDisplay, gLongDisplay);
+    updateLoadGauge(latG, fwdG);
 
     vertBuf.push(vertG);
     if (vertBuf.length > VERT_BUF_LEN) vertBuf.shift();
@@ -1268,6 +1304,7 @@
     leanMaxSxEl.textContent = '--°'; leanMaxDxEl.textContent = '--°';
     pitchMaxUpEl.textContent = '--°'; pitchMaxDownEl.textContent = '--°';
     gLatTopEl.textContent = '0.00g'; gLongTopEl.textContent = '0.00g';
+    loadPeak.classList.remove('show');
   });
 
   async function start(){
@@ -1286,8 +1323,8 @@
     recording = true;
     logData = [];
     maxLeanSx = 0; maxLeanDx = 0; maxPitchUp = 0; maxPitchDown = 0; maxGLat = 0; maxGLong = 0;
-    gLongDisplay = 0; gLatDisplay = 0;
     gLatTopEl.textContent = '0.00g'; gLongTopEl.textContent = '0.00g';
+    loadPeak.classList.remove('show');
     vertBuf = [];
     subAccel = 100; subLean = 100; subComfort = 100;
     lastLat = null; lastLon = null;
