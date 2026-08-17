@@ -88,7 +88,7 @@
   .layout { display:flex; flex-direction:row; gap:6px; flex:1 1 auto; min-height:0; }
 
   /* ============ colonne laterali (piega+Glat a sx, beccheggio+Glong a dx) ============ */
-  .col-side { flex:0 0 168px; display:flex; flex-direction:column; gap:6px; min-height:0; }
+  .col-side { flex:0 0 145px; display:flex; flex-direction:column; gap:6px; min-height:0; }
   .slot { flex:1 1 0; min-height:0; display:flex; }
 
   .stat-card {
@@ -117,18 +117,18 @@
   }
   .app.edit-mode .stat-swap-btn { display:flex; }
 
-  .cockpit-void { flex:0 0 80px; border-radius:9px; pointer-events:none; }
-
-  /* --- riga azioni rapide (Avvio/Pausa + Menù), sempre visibile in fondo alla colonna sx —
-     sostituisce la vecchia linguetta fissa `.control-handle`, non raggiungibile in marcia --- */
-  .mini-row { display:flex; gap:6px; flex:0 0 56px; }
+  /* --- riga azioni rapide (Avvio/Menù/Calibra), sempre visibile IN CIMA alla colonna sx —
+     spostata dal fondo (era raggiungibile a fatica col telefono montato sul cupolino, parte
+     bassa dello schermo lontana dalla mano) qui in alto, insieme a tutti gli altri comandi
+     (vedi anche map-recenter-btn/map-marker-btn, spostati per lo stesso motivo) --- */
+  .mini-row { display:flex; gap:5px; flex:0 0 52px; }
   .mini-item {
     flex:1 1 0; background: var(--bg2); border-radius:8px; display:flex; flex-direction:column;
     align-items:center; justify-content:center; position:relative; min-width:0;
   }
   .mini-item.mini-action {
     appearance:none; border:1px solid var(--hair); margin:0; padding:0; cursor:pointer;
-    font-family: var(--disp); font-weight:700; font-size:14px; letter-spacing:.5px; color: var(--ink);
+    font-family: var(--disp); font-weight:700; font-size:10.5px; letter-spacing:.2px; color: var(--ink);
   }
   .mini-item.mini-action:active { transform: scale(0.97); }
 
@@ -147,30 +147,40 @@
   .map-arrow::after { content:''; position:absolute; left:-11px; top:22px; width:22px; height:8px; background: var(--amber); border-radius:0 0 4px 4px; opacity:.85; }
 
   .map-nav-btn {
-    position:absolute; top:8px; right:8px; z-index:401; width:30px; height:30px; border-radius:8px;
+    position:absolute; top:8px; right:8px; z-index:401; width:36px; height:36px; border-radius:9px;
     background: var(--overlay-bg); border:1px solid var(--panel-edge); display:flex; align-items:center; justify-content:center;
-    font-size:15px; cursor:pointer; box-shadow: 0 0 10px rgba(46,142,255,.15);
+    font-size:17px; cursor:pointer; box-shadow: 0 0 10px rgba(46,142,255,.15);
   }
   .map-nav-btn.active { background: var(--blue); box-shadow: 0 0 12px rgba(46,142,255,.6); }
-  .map-empty { position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center; background: var(--bg); font-family: var(--mono); font-size:11px; color: var(--muted); text-align:center; padding:10px; }
+  /* pointer-events:none: è un avviso testuale, non deve mai "rubare" i tap destinati ai pulsanti
+     sopra la mappa (nav/recenter/segnalino, z-index 401) — prima di questa correzione, finché il
+     GPS non risultava agganciato (z-index 402, sopra tutto), quei pulsanti restavano
+     inavvertitamente inutilizzabili, scoperto testando il nuovo pulsante segnalino. */
+  .map-empty { position:absolute; inset:0; z-index:402; display:flex; align-items:center; justify-content:center; background: var(--bg); font-family: var(--mono); font-size:11px; color: var(--muted); text-align:center; padding:10px; pointer-events:none; }
 
-  .map-recenter-btn {
-    position:absolute; bottom:8px; right:8px; z-index:401; width:34px; height:34px; border-radius:50%;
+  /* Recenter + segnalino spostati in alto a sx (erano in basso a dx): stessa logica di
+     raggiungibilità del mini-row — parte bassa dello schermo lontana dalla mano una volta
+     montato il telefono. */
+  .map-recenter-btn, .map-marker-btn {
+    position:absolute; top:8px; z-index:401; width:38px; height:38px; border-radius:50%;
     background: var(--overlay-bg); border:1px solid var(--panel-edge); display:none;
-    align-items:center; justify-content:center; font-size:16px; cursor:pointer;
+    align-items:center; justify-content:center; font-size:18px; cursor:pointer;
     box-shadow: 0 0 10px rgba(46,142,255,.15);
   }
-  .map-recenter-btn.show { display:flex; }
+  .map-recenter-btn { left:8px; }
+  .map-marker-btn { left:54px; }
+  .map-recenter-btn.show, .map-marker-btn.show { display:flex; }
+  .map-marker-btn:active { transform: scale(0.92); }
 
   .nav-topbar {
-    flex:0 0 38px; display:flex; align-items:center; justify-content:center; gap:10px;
+    flex:0 0 48px; display:flex; align-items:center; justify-content:center; gap:10px;
     background: var(--bg2); border-radius:9px; padding:0 12px;
   }
-  .nav-topbar-chevron { font-family: var(--mono); font-size:20px; color: var(--accent); flex:0 0 auto; }
-  .nav-topbar-text { font-family: var(--mono); font-size:14px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nav-topbar-chevron { font-family: var(--mono); font-size:26px; color: var(--accent); flex:0 0 auto; }
+  .nav-topbar-text { font-family: var(--mono); font-size:18px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .nav-topbar-text b { color: var(--blue-glow); }
-  .nav-topbar-dist { font-family: var(--mono); font-size:12px; color: var(--ink-dim); }
-  .nav-topbar-eta { font-family: var(--mono); font-size:11px; color: var(--ink-dim); margin-left:auto; flex:0 0 auto; }
+  .nav-topbar-dist { font-family: var(--mono); font-size:14px; color: var(--ink-dim); }
+  .nav-topbar-eta { font-family: var(--mono); font-size:13px; color: var(--ink-dim); margin-left:auto; flex:0 0 auto; }
   .nav-topbar.idle .nav-topbar-text { color: var(--ink-dim); }
 
   /* ============ pulsanti (invariati nello stile, li sposta il Task 5 nel pannello comandi) ============ */
@@ -185,7 +195,7 @@
   .btn-big[disabled] { opacity:.5; pointer-events:none; }
 
   .mini-actions-row { display:flex; gap:7px; }
-  .btn-mini { appearance:none; border:1px solid var(--hair); background:transparent; color: var(--ink-dim); border-radius:9px; padding:7px 3px; font-family:'Inter',sans-serif; font-weight:500; font-size:10px; display:flex; align-items:center; justify-content:center; text-align:center; gap:3px; flex:1 1 0; min-width:0; cursor:pointer; min-height:38px; }
+  .btn-mini { appearance:none; border:1px solid var(--hair); background:transparent; color: var(--ink-dim); border-radius:9px; padding:12px 4px; font-family:'Inter',sans-serif; font-weight:600; font-size:13px; display:flex; align-items:center; justify-content:center; text-align:center; gap:3px; flex:1 1 0; min-width:0; cursor:pointer; min-height:50px; }
   .btn-mini:disabled { opacity:.4; }
 
   .log-info { font-family: var(--mono); font-size:8.5px; color: var(--muted); text-align:center; min-height:10px; }
@@ -193,12 +203,16 @@
   /* ============ popovers (settings + nav) ============ */
   .popover-backdrop { position:fixed; inset:0; background: rgba(0,0,0,.55); z-index:900; display:none; }
   .popover-backdrop.open { display:block; }
-  .popover-panel { position:fixed; bottom:12px; right:12px; left:12px; z-index:901; background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:14px; box-shadow: 0 0 30px rgba(46,142,255,.25); display:none; max-height: calc(100vh - 24px); overflow-y: auto; }
+  /* Margini "safe-area-aware" invece dei 12px fissi di prima: col telefono montato in
+     orizzontale il notch è sul lato destro, e un inset fisso rischiava di far correre il
+     pannello proprio sotto/a ridosso del notch (poco leggibile). La UI principale (mappa/HUD)
+     resta invece quasi a filo schermo — è lei che deve guadagnare spazio, non le impostazioni. */
+  .popover-panel { position:fixed; bottom:14px; right:max(16px, calc(env(safe-area-inset-right) + 10px)); left:max(16px, calc(env(safe-area-inset-left) + 10px)); z-index:901; background: var(--panel); border:1px solid var(--panel-edge); border-radius:12px; padding:16px; box-shadow: 0 0 30px rgba(46,142,255,.25); display:none; max-height: calc(100vh - 28px); overflow-y: auto; }
   .popover-panel.open { display:block; }
   /* Il Navigatore resta ancorato in alto (non in basso come gli altri popover): con la tastiera
      aperta per digitare l'indirizzo, un pannello ancorato in basso rischia di finire coperto
      dalla tastiera stessa, portandosi dietro anche il campo e i suggerimenti Google Places. */
-  #navPanel { bottom:auto; top:12px; }
+  #navPanel { bottom:auto; top:max(12px, env(safe-area-inset-top)); }
   .popover-title { font-family: var(--disp); font-size:13px; letter-spacing:1px; color: var(--ink); margin-bottom:10px; }
   .settings-row { display:flex; justify-content:space-between; align-items:center; font-family: var(--mono); font-size:11px; color: var(--text); padding:8px 0; border-top:1px solid var(--panel-edge); }
   .settings-row:first-of-type { border-top:none; }
@@ -220,6 +234,24 @@
   .pac-item-query { color: var(--ink) !important; }
   .pac-matched { color: var(--blue-glow) !important; }
   .pac-icon { display:none !important; }
+
+  /* ============ icona moto rotante (card Piega) ============ */
+  .lean-bike-wrap { display:flex; justify-content:center; flex:1 1 auto; align-items:center; min-height:0; }
+  .lean-bike-icon { width:auto; height:100%; max-height:64px; }
+  .lean-bike-icon .ground { stroke: var(--hair); stroke-width:2; }
+  .lean-bike-icon .frame { stroke: var(--ink); stroke-width:3; stroke-linecap:round; fill:none; }
+
+  /* ============ gauge trasferimento carico (sostituisce G Laterale + G Longitudinale) ============ */
+  .load-gauge { position:relative; flex:1 1 auto; min-height:0; aspect-ratio:1/1; max-width:100%; max-height:100%; margin:4px auto; border:1px solid var(--panel-edge); border-radius:50%; background: var(--hair); }
+  .load-gauge-line { position:absolute; background: var(--panel-edge); }
+  .load-gauge-line-h { left:6%; right:6%; top:50%; height:1px; }
+  .load-gauge-line-v { top:6%; bottom:6%; left:50%; width:1px; }
+  .load-gauge-tag { position:absolute; font-family: var(--mono); font-size:8px; letter-spacing:.5px; color: var(--ink-dim); }
+  .load-gauge-tag-top { top:3px; left:50%; transform:translateX(-50%); }
+  .load-gauge-tag-bottom { bottom:3px; left:50%; transform:translateX(-50%); }
+  .load-gauge-tag-left { left:4px; top:50%; transform:translateY(-50%); }
+  .load-gauge-tag-right { right:4px; top:50%; transform:translateY(-50%); }
+  .load-gauge-ball { position:absolute; width:16px; height:16px; border-radius:50%; background: var(--blue-glow); box-shadow: 0 0 10px 2px rgba(92,200,255,.6); left:50%; top:50%; transform:translate(-50%,-50%); transition: left .08s linear, top .08s linear; }
 </style>
 </head>
 <body>
@@ -239,12 +271,13 @@
     <div class="layout">
 
       <div class="col-side left" id="colSideLeft">
-        <div class="slot" id="slotLeftTop"></div>
-        <div class="slot" id="slotLeftBottom"></div>
         <div class="mini-row">
           <button class="mini-item mini-action" id="miniMainBtn" type="button">Avvio</button>
           <button class="mini-item mini-action" id="miniMenuBtn" type="button">Menù</button>
+          <button class="mini-item mini-action" id="miniCalibBtn" type="button">Calibra</button>
         </div>
+        <div class="slot" id="slotLeftTop"></div>
+        <div class="slot" id="slotLeftBottom"></div>
       </div>
 
       <div class="col-center">
@@ -259,14 +292,13 @@
           <div class="map-arrow" id="mapArrow"></div>
           <div class="map-nav-btn" id="mapNavBtn">🧭</div>
           <div class="map-recenter-btn" id="mapRecenterBtn">📍</div>
+          <div class="map-marker-btn" id="mapMarkerBtn" title="Segna questo punto">🚩</div>
           <div class="map-empty" id="mapEmpty">In attesa di segnale GPS…</div>
         </div>
       </div>
 
       <div class="col-side right" id="colSideRight">
-        <div class="slot" id="slotRightTop"></div>
-        <div class="slot" id="slotRightBottom"></div>
-        <div class="cockpit-void"></div>
+        <div class="slot" id="slotRight"></div>
       </div>
     </div>
 
@@ -275,8 +307,16 @@
       <div class="stat-card-label">Piega</div>
       <div class="stat-card-num" id="leanNumBig">--°</div>
       <div class="stat-card-sub" id="leanSub">–</div>
-      <div class="stat-bar-track"><div class="stat-bar-fill" id="leanBarFill" style="left:50%; width:0%"></div></div>
-      <div class="stat-bar-ticks"><span>60</span><span>0</span><span>60</span></div>
+      <div class="lean-bike-wrap">
+        <svg class="lean-bike-icon" viewBox="0 0 60 60">
+          <line class="ground" x1="4" y1="52" x2="56" y2="52"/>
+          <g id="leanBikeIcon" style="transform-origin:30px 52px;">
+            <circle class="frame" cx="30" cy="46" r="8"/>
+            <line class="frame" x1="30" y1="38" x2="30" y2="14"/>
+            <line class="frame" x1="19" y1="16" x2="41" y2="16"/>
+          </g>
+        </svg>
+      </div>
       <div class="stat-maxrow"><span>MAX SX <b id="leanMaxSx">--°</b></span><span>MAX DX <b id="leanMaxDx">--°</b></span></div>
     </div>
     <div id="cardPitch" class="stat-card" data-metric="pitch">
@@ -288,21 +328,19 @@
       <div class="stat-bar-ticks"><span>45</span><span>0</span><span>45</span></div>
       <div class="stat-maxrow"><span>UP <b id="pitchMaxUp">--°</b></span><span>DOWN <b id="pitchMaxDown">--°</b></span></div>
     </div>
-    <div id="cardGLat" class="stat-card" data-metric="gLat">
-      <div class="stat-swap-btn" data-metric="gLat">⇄</div>
-      <div class="stat-card-label">G Laterale</div>
-      <div class="stat-card-num" id="gLatNumBig">0.00g</div>
-      <div class="stat-bar-track"><div class="stat-bar-fill" id="gLatBarFill" style="left:50%; width:0%"></div></div>
-      <div class="stat-bar-ticks"><span>-1.5</span><span>0</span><span>1.5</span></div>
-      <div class="stat-maxrow"><span>TOP <b id="gLatTop">0.00g</b></span></div>
-    </div>
-    <div id="cardGLong" class="stat-card" data-metric="gLong">
-      <div class="stat-swap-btn" data-metric="gLong">⇄</div>
-      <div class="stat-card-label">G Longitudinale</div>
-      <div class="stat-card-num" id="gLongNumBig">0.00g</div>
-      <div class="stat-bar-track"><div class="stat-bar-fill" id="gLongBarFill" style="left:50%; width:0%"></div></div>
-      <div class="stat-bar-ticks"><span>-1</span><span>0</span><span>1</span></div>
-      <div class="stat-maxrow"><span>TOP <b id="gLongTop">0.00g</b></span></div>
+    <div id="cardLoad" class="stat-card" data-metric="load">
+      <div class="stat-swap-btn" data-metric="load">⇄</div>
+      <div class="stat-card-label">Trasferimento Carico</div>
+      <div class="load-gauge" id="loadGauge">
+        <div class="load-gauge-line load-gauge-line-h"></div>
+        <div class="load-gauge-line load-gauge-line-v"></div>
+        <div class="load-gauge-tag load-gauge-tag-top">FRENATA</div>
+        <div class="load-gauge-tag load-gauge-tag-bottom">ACCEL</div>
+        <div class="load-gauge-tag load-gauge-tag-left">SX</div>
+        <div class="load-gauge-tag load-gauge-tag-right">DX</div>
+        <div class="load-gauge-ball" id="loadBall"></div>
+      </div>
+      <div class="stat-maxrow"><span>TOP LONG <b id="gLongTop">0.00g</b></span><span>TOP LAT <b id="gLatTop">0.00g</b></span></div>
     </div>
 
     <div class="popover-backdrop" id="controlBackdrop"></div>
@@ -350,15 +388,14 @@
   // distinguere "il fix non ha funzionato" da "sto ancora vedendo una pagina in cache" (iOS
   // Safari cachea aggressivamente, specie se l'app è stata aggiunta alla schermata Home) —
   // fonte di confusione già capitata durante il debug di piega/beccheggio.
-  const BUILD_VERSION = '2026-08-17-lean-clamp';
+  const BUILD_VERSION = '2026-08-17-reachability';
   const $ = id => document.getElementById(id);
-  const leanNumBig = $('leanNumBig'), leanSub = $('leanSub'), leanBarFill = $('leanBarFill');
+  const leanNumBig = $('leanNumBig'), leanSub = $('leanSub'), leanBikeIcon = $('leanBikeIcon');
   const leanMaxSxEl = $('leanMaxSx'), leanMaxDxEl = $('leanMaxDx');
   const pitchNumBig = $('pitchNumBig'), pitchSub = $('pitchSub'), pitchBarFill = $('pitchBarFill');
   const pitchMaxUpEl = $('pitchMaxUp'), pitchMaxDownEl = $('pitchMaxDown');
-  const gLatNumBig = $('gLatNumBig'), gLatBarFill = $('gLatBarFill'), gLatTopEl = $('gLatTop');
-  const gLongNumBig = $('gLongNumBig'), gLongBarFill = $('gLongBarFill'), gLongTopEl = $('gLongTop');
-  const miniMainBtn = $('miniMainBtn'), miniMenuBtn = $('miniMenuBtn');
+  const loadBall = $('loadBall'), gLatTopEl = $('gLatTop'), gLongTopEl = $('gLongTop');
+  const miniMainBtn = $('miniMainBtn'), miniMenuBtn = $('miniMenuBtn'), miniCalibBtn = $('miniCalibBtn');
   let recording = false;
   const mainBtn = $('mainBtn'), exportBtn = $('exportBtn'), calibBtn = $('calibBtn'), resetMaxBtn = $('resetMaxBtn');
   const statusDot = $('statusDot'), statusText = $('statusText');
@@ -366,15 +403,15 @@
   const permNote = $('permNote');
   const mapEmpty = $('mapEmpty'), mapArrow = $('mapArrow');
   const colMap = $('colMap');
-  const slotLeftTop = $('slotLeftTop'), slotLeftBottom = $('slotLeftBottom'), slotRightTop = $('slotRightTop'), slotRightBottom = $('slotRightBottom');
-  const cardLean = $('cardLean'), cardPitch = $('cardPitch'), cardGLat = $('cardGLat'), cardGLong = $('cardGLong');
+  const slotLeftTop = $('slotLeftTop'), slotLeftBottom = $('slotLeftBottom'), slotRight = $('slotRight');
+  const cardLean = $('cardLean'), cardPitch = $('cardPitch'), cardLoad = $('cardLoad');
   const controlPanel = $('controlPanel'), controlBackdrop = $('controlBackdrop'), controlClose = $('controlClose');
   const themeToggle = $('themeToggle'), editModeToggle = $('editModeToggle');
   const buildVersionEl = $('buildVersion');
   if (buildVersionEl) buildVersionEl.textContent = BUILD_VERSION;
   const appEl = document.querySelector('.app');
   const mapNavBtn = $('mapNavBtn'), navPanel = $('navPanel'), navBackdrop = $('navBackdrop'), destInput = $('destInput'), navGoBtn = $('navGoBtn'), navClearBtn = $('navClearBtn'), navCloseBtn = $('navCloseBtn'), navInfo = $('navInfo');
-  const mapRecenterBtn = $('mapRecenterBtn');
+  const mapRecenterBtn = $('mapRecenterBtn'), mapMarkerBtn = $('mapMarkerBtn');
   const waypointList = $('waypointList'), addWaypointBtn = $('addWaypointBtn');
   const voiceToggle = $('voiceToggle');
   const navTopbar = $('navTopbar'), navTopbarChevron = $('navTopbarChevron'), navTopbarText = $('navTopbarText'), navTopbarDist = $('navTopbarDist'), navTopbarEta = $('navTopbarEta');
@@ -402,12 +439,16 @@
   pickerClose.addEventListener('click', closePicker);
   pickerBackdrop.addEventListener('click', closePicker);
 
-  /* ---------- assegnazione card grandi agli slot (default; lo scambio arriva nel Task 6) ---------- */
-  const CARD_METRICS = ['lean', 'pitch', 'gLat', 'gLong'];
-  const CARD_EL = { lean: cardLean, pitch: cardPitch, gLat: cardGLat, gLong: cardGLong };
-  const SLOT_EL = { leftTop: slotLeftTop, leftBottom: slotLeftBottom, rightTop: slotRightTop, rightBottom: slotRightBottom };
-  const SLOT_KEYS = ['leftTop', 'leftBottom', 'rightTop', 'rightBottom'];
-  let cardLayout = { leftTop: 'lean', leftBottom: 'gLat', rightTop: 'pitch', rightBottom: 'gLong' };
+  /* ---------- assegnazione card grandi agli slot ---------- */
+  // Sceso da 4 a 3 card (G Laterale + G Longitudinale unite nel gauge "Trasferimento Carico") per
+  // dare più spazio alla mappa — la colonna destra ora ha un solo slot a tutta altezza invece di
+  // due, la sinistra tiene piega+beccheggio. Codice generico rispetto al numero di slot/metriche
+  // (usa SLOT_KEYS.length invece di un 4 fisso) così non si rompe se questo cambia ancora.
+  const CARD_METRICS = ['lean', 'pitch', 'load'];
+  const CARD_EL = { lean: cardLean, pitch: cardPitch, load: cardLoad };
+  const SLOT_EL = { leftTop: slotLeftTop, leftBottom: slotLeftBottom, right: slotRight };
+  const SLOT_KEYS = ['leftTop', 'leftBottom', 'right'];
+  let cardLayout = { leftTop: 'lean', leftBottom: 'pitch', right: 'load' };
   function applyCardLayout(){
     SLOT_KEYS.forEach(slotKey => { SLOT_EL[slotKey].appendChild(CARD_EL[cardLayout[slotKey]]); });
   }
@@ -417,9 +458,9 @@
   function loadCardLayout(){
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem('moto_card_layout')); } catch(e){}
-    // valida: deve avere esattamente le 4 chiavi slot, ognuna con uno dei 4 metric, tutti distinti
+    // valida: deve avere esattamente le chiavi slot correnti, ognuna con un metric valido, tutti distinti
     if (saved && SLOT_KEYS.every(k => CARD_METRICS.includes(saved[k]))
-        && new Set(SLOT_KEYS.map(k => saved[k])).size === 4) {
+        && new Set(SLOT_KEYS.map(k => saved[k])).size === SLOT_KEYS.length) {
       cardLayout = saved;
     }
   }
@@ -433,7 +474,7 @@
     applyCardLayout();
     saveCardLayout();
   }
-  const CARD_LABELS = { lean: 'Piega', pitch: 'Beccheggio', gLat: 'G Laterale', gLong: 'G Longitudinale' };
+  const CARD_LABELS = { lean: 'Piega', pitch: 'Beccheggio', load: 'Trasferimento Carico' };
   document.querySelectorAll('.stat-card > .stat-swap-btn[data-metric]').forEach(btn => {
     const metric = btn.getAttribute('data-metric');
     btn.addEventListener('click', (e) => {
@@ -527,7 +568,6 @@
     navTopbarChevron.textContent = '–';
     navTopbarDist.textContent = '';
     navTopbarEta.textContent = '';
-    stopGpsIfIdle();
   }
 
   function updateNavPanel(){
@@ -592,6 +632,17 @@
     speechSynthesis.speak(utter);
   }
 
+  // "Sblocca" il motore vocale di Safari iOS: speechSynthesis.speak() chiamato da codice NON
+  // direttamente dentro un gestore di tap (es. dal callback del GPS durante la guida turno-per-
+  // turno, vedi updateNavProgress()) viene ignorato in silenzio dalle policy anti-autoplay di
+  // iOS — probabile causa della voce "che non funziona". Chiamare speak() con un'utterance vuota
+  // SINCRONAMENTE dentro un vero tap (qui: Avvio e Vai) sblocca il motore per il resto della
+  // sessione, anche per le chiamate successive innescate da GPS/timer.
+  function primeSpeech(){
+    if (!('speechSynthesis' in window)) return;
+    try { speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch(e){}
+  }
+
   /* ---------- navigator popover ---------- */
   let waypointInputs = [];
   let destAutocompleteReady = false;
@@ -635,6 +686,7 @@
   navCloseBtn.addEventListener('click', closeNav);
   navBackdrop.addEventListener('click', closeNav);
   navGoBtn.addEventListener('click', () => {
+    primeSpeech();
     const dest = destInput.value.trim();
     if (!dest) return;
     if (lastLat === null) { navInfo.textContent = 'Aspetta il segnale GPS.'; return; }
@@ -765,13 +817,13 @@
   const G_DISPLAY_ALPHA = 0.12;
 
   // Soglie minime di attivazione ("deadzone") — sotto questi valori il dato viene mostrato come
-  // esattamente zero invece del rumore residuo del sensore a moto ferma. Punti di partenza
-  // ragionevoli non calibrati su dati reali, come le altre soglie di questa sezione — da
-  // aggiustare se in marcia risultano troppo/poco aggressive. Non tocca i valori grezzi usati per
-  // il punteggio guida, solo la resa a schermo (stesso principio di gLongDisplay/gLatDisplay sopra).
-  const G_DEADZONE = 0.04;
-  const LEAN_DEADZONE_DEG = 1.0;
-  const PITCH_DEADZONE_DEG = 1.0;
+  // esattamente zero invece del rumore residuo del sensore a moto ferma. `let` invece di `const`:
+  // sono ora anche il bersaglio della calibrazione rumore in runCalibration() (vedi sotto), che le
+  // ricalcola dal rumore REALE misurato a moto ferma (vibrazioni motore comprese) invece di questi
+  // valori fissi di partenza, usati come default finché non si esegue almeno una calibrazione.
+  let G_DEADZONE = 0.04;
+  let LEAN_DEADZONE_DEG = 1.0;
+  let PITCH_DEADZONE_DEG = 1.0;
 
   let sensorsActive = false;
   let currentLean = 0, currentPitch = 0;
@@ -798,18 +850,17 @@
   }
   let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0, maxGLat = 0, maxGLong = 0;
   let watchId = null;
+  // GPS/mappa sempre attivi da quando l'app si apre (non più legati all'avvio di una
+  // registrazione o navigazione): l'utente vuole vedere mappa+posizione subito, senza dover
+  // premere "Avvia" solo per ricevere il permesso e vedere dove si trova. Per questo non esiste
+  // più un equivalente di "stopGpsIfIdle" — una volta concesso il permesso resta attivo per
+  // tutta la sessione.
   function ensureGps(){
     if (watchId !== null) return;
     if (!navigator.geolocation) return;
     watchId = navigator.geolocation.watchPosition(handlePosition, (err) => {
       logInfo.textContent = 'GPS non disponibile: ' + err.message;
     }, { enableHighAccuracy: true, maximumAge: 500, timeout: 8000 });
-  }
-  function stopGpsIfIdle(){
-    if (!recording && !navActive && watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-    }
   }
   let logData = [];
   let lastLat = null, lastLon = null;
@@ -861,8 +912,11 @@
     const isDx = rollDeg < 0;
     leanNumBig.textContent = abs.toFixed(0) + '°';
     leanSub.textContent = isDx ? 'DESTRA' : 'SINISTRA';
-    // barra: positivo = destra (a specchio rispetto al segno di rollDeg, che è negativo per DX)
-    setBarFill(leanBarFill, isDx ? abs : -abs, 60);
+    // Icona moto: ruota intorno al punto di contatto ruota (transform-origin in fondo all'SVG,
+    // vedi markup). Segno invertito rispetto a rollDeg perché una rotazione CSS positiva è
+    // oraria (verso DX guardando lo schermo) mentre rollDeg negativo=DX — stessa logica già
+    // usata (e persa una volta) per la vecchia sagoma SVG, vedi commento sopra la funzione.
+    if (leanBikeIcon) leanBikeIcon.style.transform = 'rotate(' + (-rollDeg) + 'deg)';
 
     leanNumBig.classList.remove('warn','danger');
     leanSub.classList.remove('warn','danger');
@@ -900,27 +954,33 @@
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) compassHeading = e.webkitCompassHeading;
   }
 
-  // Verso del TOP G laterale (DX/SX) non validato su strada: per costruzione condivide lo stesso
-  // asse X compensato (compensateAccelXY) usato dal roll/piega (computeLeanFromGravity), quindi qui
-  // si assume la stessa convenzione già confermata per la piega (negativo = DX, positivo = SX) —
-  // se in marcia risulta invertito, basta scambiare 'DX'/'SX' nella riga sotto.
-  function updateGLatGauge(gSmooth){
-    if (Math.abs(gSmooth) < G_DEADZONE) gSmooth = 0;
-    gLatNumBig.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
-    setBarFill(gLatBarFill, gSmooth, 1.5);
-    if (Math.abs(gSmooth) > Math.abs(maxGLat)) {
-      maxGLat = gSmooth;
+  // Gauge unico "Trasferimento Carico" (sostituisce le vecchie card separate G Laterale/G
+  // Longitudinale): una pallina si sposta in una croce, in alto/basso per accelerazione
+  // longitudinale, sx/dx per quella laterale — stile g-meter da telemetria racing.
+  // Convenzioni segno (stesse dei G grezzi già in uso, non nuove):
+  //  - fwdG positivo=accelerazione, negativo=frenata (vedi handleMotion/CSV) → durante la
+  //    frenata il trasferimento di carico va in AVANTI, quindi la pallina sale verso l'alto
+  //    (tag FRENATA) quando fwdG è negativo, scende verso il basso (tag ACCEL) quando è positivo.
+  //  - gLat negativo=DX, positivo=SX (stessa convenzione di rollDeg, non validata
+  //    indipendentemente su strada — vedi computeLeanFromGravity) → la pallina va a destra
+  //    quando gLat è negativo.
+  // Scale ±1.0g longitudinale e ±1.5g laterale (stesse già usate dalle vecchie barre), oltre le
+  // quali la pallina resta ancorata al bordo del cerchio invece di uscirne.
+  function updateLoadGauge(gLat, gLong){
+    if (Math.abs(gLat) < G_DEADZONE) gLat = 0;
+    if (Math.abs(gLong) < G_DEADZONE) gLong = 0;
+    const xPct = 50 - clamp(gLat / 1.5, -1, 1) * 40;
+    const yPct = 50 + clamp(gLong / 1.0, -1, 1) * 40;
+    loadBall.style.left = xPct + '%';
+    loadBall.style.top = yPct + '%';
+
+    if (Math.abs(gLat) > Math.abs(maxGLat)) {
+      maxGLat = gLat;
       const side = maxGLat < 0 ? 'DX' : 'SX';
       gLatTopEl.textContent = Math.abs(maxGLat).toFixed(2) + 'g ' + side;
     }
-  }
-
-  function updateGLongGauge(gSmooth){
-    if (Math.abs(gSmooth) < G_DEADZONE) gSmooth = 0;
-    gLongNumBig.textContent = (gSmooth >= 0 ? '+' : '') + gSmooth.toFixed(2) + 'g';
-    setBarFill(gLongBarFill, gSmooth, 1.0);
-    if (Math.abs(gSmooth) > Math.abs(maxGLong)) {
-      maxGLong = gSmooth;
+    if (Math.abs(gLong) > Math.abs(maxGLong)) {
+      maxGLong = gLong;
       const dir = maxGLong < 0 ? 'FRENATA' : 'ACCEL';
       gLongTopEl.textContent = Math.abs(maxGLong).toFixed(2) + 'g ' + dir;
     }
@@ -964,8 +1024,7 @@
     const fwdG = linear.y / 9.81, latG = linear.x / 9.81, vertG = linear.z / 9.81;
     gLongDisplay += (fwdG - gLongDisplay) * G_DISPLAY_ALPHA;
     gLatDisplay += (latG - gLatDisplay) * G_DISPLAY_ALPHA;
-    updateGLongGauge(gLongDisplay);
-    updateGLatGauge(gLatDisplay);
+    updateLoadGauge(gLatDisplay, gLongDisplay);
 
     vertBuf.push(vertG);
     if (vertBuf.length > VERT_BUF_LEN) vertBuf.shift();
@@ -1088,10 +1147,33 @@
         accel_lat_g: t.latG !== undefined ? +t.latG.toFixed(3) : '',
         accel_vert_g: t.vertG !== undefined ? +t.vertG.toFixed(3) : '',
         comfort_idx: t.comfortIdx !== undefined ? +t.comfortIdx.toFixed(0) : '',
-        score: t.score !== undefined ? +t.score.toFixed(0) : ''
+        score: t.score !== undefined ? +t.score.toFixed(0) : '',
+        marker: ''
       });
     }
   }
+
+  // Segnalino: riga dedicata inserita al tocco (non aspetta il prossimo aggiornamento GPS, che
+  // può arrivare con fino a ~1s di ritardo) con uno snapshot completo dei valori correnti, per
+  // poi ritrovare nel CSV esattamente l'istante segnalato in marcia (es. "ho frenato troppo qui").
+  function addMarker(){
+    if (!recording) return;
+    const t = window.__latestTelemetry || {};
+    logData.push({
+      t: new Date().toISOString(), lat: lastLat ?? '', lon: lastLon ?? '',
+      speed_kmh: '', heading_deg: '',
+      lean_deg: +currentLean.toFixed(1), pitch_deg: +(t.pitch ?? currentPitch).toFixed(1),
+      accel_fwd_g: t.fwdG !== undefined ? +t.fwdG.toFixed(3) : '',
+      accel_lat_g: t.latG !== undefined ? +t.latG.toFixed(3) : '',
+      accel_vert_g: t.vertG !== undefined ? +t.vertG.toFixed(3) : '',
+      comfort_idx: t.comfortIdx !== undefined ? +t.comfortIdx.toFixed(0) : '',
+      score: t.score !== undefined ? +t.score.toFixed(0) : '',
+      marker: 1
+    });
+    logInfo.textContent = 'Segnalino aggiunto ✓';
+    setTimeout(() => { if (recording) logInfo.textContent = ''; }, 1200);
+  }
+  mapMarkerBtn.addEventListener('click', addMarker);
 
   async function requestPermissions(){
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -1115,11 +1197,50 @@
     return true;
   }
 
-  calibBtn.addEventListener('click', async () => {
-    calibBtn.disabled = true;
+  // Calibrazione rumore: prima di azzerare gli offset, raccoglie ~1.5s di campioni grezzi a moto
+  // ferma (vibrazioni motore/micro-movimenti compresi, non solo rumore statico) e ricalcola le
+  // deadzone su misura invece di usare i valori fissi di partenza — vedi commento su
+  // G_DEADZONE/LEAN_DEADZONE_DEG/PITCH_DEADZONE_DEG più sopra.
+  const CALIB_SAMPLE_MS = 1500;
+  function collectNoiseSamples(durationMs){
+    return new Promise(resolve => {
+      const samples = { lean: [], pitch: [], gLat: [], gLong: [] };
+      const collector = () => {
+        samples.lean.push(lastRawRoll);
+        samples.pitch.push(lastRawPitch);
+        samples.gLat.push(linear.x / 9.81);
+        samples.gLong.push(linear.y / 9.81);
+      };
+      // Registrato DOPO handleMotion (già attivo via ensureSensors prima di chiamare questa
+      // funzione): gli event listener sullo stesso target/evento scattano in ordine di
+      // registrazione, quindi qui lastRawRoll/lastRawPitch/linear sono già aggiornati per il
+      // campione corrente.
+      window.addEventListener('devicemotion', collector, true);
+      setTimeout(() => {
+        window.removeEventListener('devicemotion', collector, true);
+        resolve(samples);
+      }, durationMs);
+    });
+  }
+  function stdDev(arr){
+    if (arr.length < 2) return 0;
+    const mean = arr.reduce((a,b) => a + b, 0) / arr.length;
+    const variance = arr.reduce((a,b) => a + (b-mean)*(b-mean), 0) / arr.length;
+    return Math.sqrt(variance);
+  }
+
+  async function runCalibration(){
     const ok = await ensureSensors();
-    calibBtn.disabled = false;
-    if (!ok) return;
+    if (!ok) return false;
+    logInfo.textContent = 'Calibrazione in corso — tieni la moto ferma…';
+    const samples = await collectNoiseSamples(CALIB_SAMPLE_MS);
+    // Soglia = 3 deviazioni standard del rumore misurato, con margini min/max per non azzerare
+    // la sensibilità né lasciarla troppo aggressiva se la sessione risulta insolitamente
+    // rumorosa (es. una buca proprio durante la calibrazione).
+    LEAN_DEADZONE_DEG = clamp(stdDev(samples.lean) * 3, 0.5, 6);
+    PITCH_DEADZONE_DEG = clamp(stdDev(samples.pitch) * 3, 0.5, 6);
+    G_DEADZONE = clamp(stdDev(samples.gLat.concat(samples.gLong)) * 3, 0.02, 0.15);
+
     leanOffset = lastRawRoll;
     if (lastRawAG) {
       gEst.x = lastRawAG.x; gEst.y = lastRawAG.y; gEst.z = lastRawAG.z;
@@ -1131,7 +1252,15 @@
     }
     logInfo.textContent = 'Sensori azzerati ✓';
     setTimeout(() => { if (!recording) logInfo.textContent = ''; }, 1800);
-  });
+    return true;
+  }
+  async function handleCalibClick(){
+    calibBtn.disabled = true; miniCalibBtn.disabled = true;
+    await runCalibration();
+    calibBtn.disabled = false; miniCalibBtn.disabled = false;
+  }
+  calibBtn.addEventListener('click', handleCalibClick);
+  miniCalibBtn.addEventListener('click', handleCalibClick);
 
   resetMaxBtn.addEventListener('click', () => {
     if (!confirm('Azzerare i valori massimi di piega, beccheggio e G raggiunti finora?')) return;
@@ -1171,22 +1300,23 @@
     miniMainBtn.textContent = 'Pausa';
     miniMainBtn.disabled = false;
     exportBtn.disabled = true;
+    mapMarkerBtn.classList.add('show');
     logInfo.textContent = '';
   }
 
   function stop(){
     recording = false;
-    stopGpsIfIdle();
     setStatus(false, 'FERMO');
     mainBtn.textContent = 'Avvia';
     mainBtn.classList.remove('stop'); mainBtn.classList.add('start');
     miniMainBtn.textContent = 'Avvio';
     exportBtn.disabled = logData.length === 0;
+    mapMarkerBtn.classList.remove('show');
     logInfo.textContent = logData.length + ' punti pronti.';
   }
 
   function handleStartStopClick(){
-    if (!recording) { start(); return; }
+    if (!recording) { primeSpeech(); start(); return; }
     if (!confirm('Fermare la registrazione?')) return;
     stop();
   }
@@ -1195,8 +1325,8 @@
 
   exportBtn.addEventListener('click', () => {
     if (logData.length === 0) return;
-    const header = 'timestamp,lat,lon,speed_kmh,heading_deg,lean_deg,pitch_deg,accel_fwd_g,accel_lat_g,accel_vert_g,comfort_idx,score\n';
-    const rows = logData.map(r => `${r.t},${r.lat},${r.lon},${r.speed_kmh},${r.heading_deg},${r.lean_deg},${r.pitch_deg},${r.accel_fwd_g},${r.accel_lat_g},${r.accel_vert_g},${r.comfort_idx},${r.score}`).join('\n');
+    const header = 'timestamp,lat,lon,speed_kmh,heading_deg,lean_deg,pitch_deg,accel_fwd_g,accel_lat_g,accel_vert_g,comfort_idx,score,marker\n';
+    const rows = logData.map(r => `${r.t},${r.lat},${r.lon},${r.speed_kmh},${r.heading_deg},${r.lean_deg},${r.pitch_deg},${r.accel_fwd_g},${r.accel_lat_g},${r.accel_vert_g},${r.comfort_idx},${r.score},${r.marker}`).join('\n');
     const blob = new Blob([header + rows], { type:'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1221,6 +1351,10 @@
     if (document.visibilityState === 'visible') requestWakeLock();
   });
   requestWakeLock();
+
+  // Mappa + posizione subito all'apertura dell'app, senza aspettare "Avvia": richiede qui il
+  // permesso GPS (a differenza dei sensori di movimento, su iOS non serve un tap dedicato).
+  ensureGps();
 
   setStatus(false, 'FERMO');
 })();
