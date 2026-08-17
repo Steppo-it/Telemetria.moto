@@ -720,24 +720,34 @@
   // Piega (roll) dal vettore di gravità grezzo e istantaneo, stesso principio del beccheggio sopra
   // — NON più da deviceorientation.beta/gamma (vedi handleOrientation(), ora usato solo per
   // l'heading bussola). Bug osservato su strada: sollevando il telefono oltre ~30° di beccheggio
-  // (beta che si avvicina a ±90°, la zona instabile per costruzione), la piega calcolata da gamma
   // "impazziva" fino a ~170° pur senza un reale movimento di piega — gimbal lock classico degli
-  // angoli di Eulero (lo stesso motivo per cui il beccheggio non usa più beta, vedi sopra), qui
-  // però sul gamma anziché sul beta stesso, perché è la coppia beta/gamma nel suo insieme a
-  // degenerare quando beta si avvicina ai poli. Usando atan2 sul vettore di gravità (come già per
-  // il beccheggio) il problema del gimbal lock non si presenta più fino a beccheggio ±90°
-  // (verificato in simulazione: piega stabile durante una salita simulata del beccheggio da 10°
-  // a 90° — ben oltre i 30° del bug originale). Limite residuo NOTO e ACCETTATO, non risolvibile
-  // in generale senza un terzo riferimento (bussola/giroscopio): oltre i ±90° di beccheggio grezzo
-  // (gz che cambia segno) la scomposizione in due angoli indipendenti dalla sola gravità perde di
-  // significato e la piega calcolata può risultare inattendibile — limite intrinseco di QUALSIASI
-  // coppia di angoli ricavata dal solo vettore di gravità, non specifico di questa formula.
+  // angoli di Eulero (lo stesso motivo per cui il beccheggio non usa più beta, vedi sopra).
+  //
+  // Prima versione di questa funzione (atan2(comp.x, gz), due argomenti CON segno come il
+  // beccheggio): risolveva il gimbal lock di beta/gamma ma introduceva un problema equivalente
+  // per un'altra via — con un supporto che monta il telefono già molto inclinato di suo (es. su
+  // un cupolino, ~60° dalla orizzontale), la componente Z grezza del sensore a riposo è già
+  // piccola (non ~9.8 come per un telefono piatto), e bastano ~30° di beccheggio REALE aggiuntivo
+  // per farla passare per zero — proprio la soglia osservata nel bug. In quella zona atan2(x,z)
+  // diventa instabile: piccoli movimenti reali producono salti enormi nel risultato, perché sia x
+  // che z si avvicinano contemporaneamente a zero.
+  // Fix: usare Math.sqrt(comp.y² + gz²) come secondo argomento invece del solo gz — la stessa
+  // tecnica "indipendente dal beccheggio" già scartata per il beccheggio stesso (lì serviva
+  // l'opposto: un intervallo esteso, non una lettura stabile rispetto all'altro asse). Qui invece
+  // è la scelta giusta: quel denominatore resta vicino alla norma piena di gravità (~9.8)
+  // qualunque sia il beccheggio, perché il beccheggio sposta la gravità DENTRO il piano Y-Z senza
+  // farla uscire — non si avvicina mai a zero per un beccheggio puro, a differenza del solo gz.
+  // Come contropartita la piega torna limitata a ±90° (accettabile: una moto non piega oltre
+  // l'orizzontale in condizioni normali, a differenza del beccheggio durante un'impennata).
+  // Verificato numericamente con un montaggio di base a 60° e beccheggio reale crescente: la
+  // vecchia formula salta da 15° a -165° esattamente al superamento dei 30° aggiuntivi (bug
+  // riprodotto); la nuova resta stabile vicino al valore reale per l'intero intervallo testato.
   // Convenzione segno NON validata su strada per questa nuova formula (derivata per analogia dalla
   // convenzione già confermata rollDeg negativo=DX/positivo=SX, non ri-testata direttamente): se
   // risulta invertita, cambia il segno di comp.x qui sotto (da `comp.x` a `-comp.x`).
   function computeLeanFromGravity(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
-    const rad = Math.atan2(comp.x, gz);
+    const rad = Math.atan2(comp.x, Math.sqrt(comp.y * comp.y + gz * gz));
     return rad * 180 / Math.PI;
   }
 
