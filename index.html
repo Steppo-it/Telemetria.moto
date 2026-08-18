@@ -239,13 +239,14 @@
   .lean-bike-wrap { display:flex; justify-content:center; flex:1 1 auto; align-items:center; min-height:0; }
   .lean-bike-icon { width:auto; height:100%; max-height:64px; }
   .lean-bike-icon .ground { stroke: var(--hair); stroke-width:2; }
-  /* Pneumatico invece della sagoma moto (era troppo stilizzata/poco leggibile): battistrada
-     tratteggiato (anello esterno) + fianco (anello interno) + razze/mozzo, ruota tutta insieme
-     intorno al punto di contatto col terreno — stessa logica di rotazione di prima. */
-  .lean-bike-icon .tire-tread { fill:none; stroke: var(--ink); stroke-width:4; stroke-dasharray:3.5 3; }
-  .lean-bike-icon .tire-body { fill:none; stroke: var(--ink); stroke-width:2; }
-  .lean-bike-icon .tire-spoke { stroke: var(--ink-dim); stroke-width:1.5; }
-  .lean-bike-icon .tire-hub { fill: var(--ink); }
+  /* Pneumatico visto da dietro (non di lato): la piega è perpendicolare al senso di marcia, quindi
+     va rappresentata come si vedrebbe il pneumatico posteriore guardando la moto da dietro — una
+     capsula stretta e alta (il battistrada visto di taglio, non il profilo circolare della ruota
+     visto di lato), con qualche scanalatura orizzontale, che ruota intorno al punto di contatto
+     col terreno. Prima versione (cerchio con mozzo/razze) era la vista laterale, sbagliata per
+     questo scopo — corretta dopo segnalazione. */
+  .lean-bike-icon .tire-tread { fill: var(--hair); stroke: var(--ink); stroke-width:2.5; }
+  .lean-bike-icon .tire-groove { stroke: var(--ink-dim); stroke-width:1.5; }
 
   /* ============ gauge trasferimento carico (sostituisce G Laterale + G Longitudinale) ============ */
   /* flex:0 0 auto (non "1 1 auto"): con "1 1 auto" dentro una colonna flex, il gauge si allargava
@@ -330,11 +331,10 @@
         <svg class="lean-bike-icon" viewBox="0 0 60 60">
           <line class="ground" x1="4" y1="52" x2="56" y2="52"/>
           <g id="leanBikeIcon" style="transform-origin:30px 52px;">
-            <circle class="tire-tread" cx="30" cy="34" r="17"/>
-            <circle class="tire-body" cx="30" cy="34" r="13"/>
-            <line class="tire-spoke" x1="30" y1="23" x2="30" y2="45"/>
-            <line class="tire-spoke" x1="19" y1="34" x2="41" y2="34"/>
-            <circle class="tire-hub" cx="30" cy="34" r="3"/>
+            <rect class="tire-tread" x="21" y="20" width="18" height="32" rx="9"/>
+            <line class="tire-groove" x1="24" y1="29" x2="36" y2="29"/>
+            <line class="tire-groove" x1="24" y1="36" x2="36" y2="36"/>
+            <line class="tire-groove" x1="24" y1="43" x2="36" y2="43"/>
           </g>
         </svg>
       </div>
@@ -410,7 +410,7 @@
   // distinguere "il fix non ha funzionato" da "sto ancora vedendo una pagina in cache" (iOS
   // Safari cachea aggressivamente, specie se l'app è stata aggiunta alla schermata Home) —
   // fonte di confusione già capitata durante il debug di piega/beccheggio.
-  const BUILD_VERSION = '2026-08-17-axis-swap-fix2-tire';
+  const BUILD_VERSION = '2026-08-18-decouple-rear-tire';
   const $ = id => document.getElementById(id);
   const leanNumBig = $('leanNumBig'), leanSub = $('leanSub'), leanBikeIcon = $('leanBikeIcon');
   const leanMaxSxEl = $('leanMaxSx'), leanMaxDxEl = $('leanMaxDx');
@@ -782,20 +782,40 @@
   // gravità grezzo (mai su gEst, il filtro passa-basso: durante un'inclinazione sostenuta gEst
   // "insegue" la nuova inclinazione trattandola come gravità di riferimento, facendo scendere
   // l'angolo verso 0 anche se il telefono resta inclinato — bug osservato, vedi git log). Con QUESTO
-  // montaggio (cupolino, ~60° dalla orizzontale) i due assi compensati si comportano in modo
-  // opposto: uno (Y) ha un valore di riposo che consuma gran parte del range ±90° di una formula
-  // "sqrt-bounded" (sature presto, Round 1); l'altro (X) ha un valore di riposo vicino al punto di
-  // wraparound ±180° di una formula "a due argomenti con segno" (instabile lì, Round 2). Le due
-  // forme di formula sono quindi scelte per compensare CIASCUNA il difetto specifico del proprio
-  // asse — scambiarle tra loro (Round 4) reintroduce entrambi i bug, solo su etichette diverse.
+  // montaggio (cupolino, ~60° dalla orizzontale) l'asse Y ha un valore di riposo che consuma gran
+  // parte del range ±90° di una formula "sqrt-bounded" (satura presto, Round 1) — per questo Y usa
+  // la formula a due argomenti con segno, range esteso. L'asse X aveva inizialmente lo stesso
+  // problema di instabilità vicino al wraparound ±180° con quella stessa forma di formula (Round
+  // 2), risolto allora passando X a una formula sqrt-bounded — ma quella versione si è rivelata
+  // accoppiata alla piega (Round 6, vedi commento su `computeAngleExactX` sotto): tornata alla
+  // formula a range esteso anche per X, con l'instabilità di wraparound ora mitigata dal clamp
+  // anti-salto invece che evitata strutturalmente dalla forma della formula.
   function computeAngleExtY(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
     const rad = Math.atan2(-comp.y, gz);
     return rad * 180 / Math.PI;
   }
-  function computeAngleBoundedX(gx, gy, gz, angle){
+  // Round 6 — la versione sqrt-bounded (Math.atan2(comp.x, Math.sqrt(comp.y²+gz²))) risultava
+  // accoppiata alla piega: piegando la moto, il beccheggio letto cambiava anche senza un reale
+  // movimento di beccheggio (segnalato: "piegando a sx il beccheggio va giù, a destra va su").
+  // Causa: con un montaggio a base fortemente inclinata (~60°, questo cupolino), la MAGNITUDINE
+  // sqrt(comp.y²+gz²) non è costante al variare della piega reale — dipende da come la piega
+  // "ruota" gravità dentro il piano Y-Z rispetto a un beccheggio di base già grande, quindi la usa
+  // come denominatore fa trapelare piega nel beccheggio. La versione grezza (solo `gz`, senza
+  // sqrt) è invece matematicamente ESATTA e indipendente dalla piega per costruzione (verificato
+  // numericamente offline con un modello di rotazione composta: piega ±30° su una base di
+  // beccheggio 60° lascia questa formula fissa al valore vero, mentre la sqrt-bounded si sposta di
+  // ~11°). Il costo di tornare alla versione grezza è la stessa instabilità di wraparound vicino a
+  // ±180° diagnosticata nel Round 2 (per un asse diverso, ma la stessa forma di formula) — mitigata
+  // qui allo stesso modo: `clampImplausiblePitchJump()` sotto, gemello di quello già in uso per la
+  // piega. Il secondo accoppiamento segnalato insieme a questo (il beccheggio che influenza la
+  // piega) non trova invece riscontro nel modello numerico — la formula della piega
+  // (`computeAngleExtY`) risulta già indipendente dal beccheggio per costruzione; probabile
+  // imprecisione del test a mano (isolare un beccheggio puro senza un minimo di piega involontaria
+  // è difficile), da confermare su strada dopo questo fix.
+  function computeAngleExactX(gx, gy, gz, angle){
     const comp = compensateAccelXY(gx, gy, angle);
-    const rad = Math.atan2(comp.x, Math.sqrt(comp.y * comp.y + gz * gz));
+    const rad = Math.atan2(comp.x, gz);
     return rad * 180 / Math.PI;
   }
 
@@ -823,12 +843,14 @@
   let lastRawRoll = 0, lastRawPitch = 0;
   let leanOffset = 0, pitchOffset = 0;
   let lastRawRollClampTime = null;
-  // Limite di plausibilità fisica (non un dato scientifico): una moto non può cambiare piega di
-  // decine/centinaia di gradi in una frazione di secondo. Rete di sicurezza indipendente dalla
-  // causa esatta di un eventuale salto nella lettura grezza — applicata alla card che in quel
-  // momento usa la formula a range esteso (vedi Round 5, handleMotion(): oggi la piega, prima del
-  // Round 5 era il beccheggio), l'unica delle due prona a un salto di wraparound. 300°/s è
-  // generoso rispetto a qualunque piega reale in marcia normale, anche aggressiva.
+  let lastRawPitchClampTime = null;
+  // Limite di plausibilità fisica (non un dato scientifico): una moto non può cambiare piega o
+  // beccheggio di decine/centinaia di gradi in una frazione di secondo. Rete di sicurezza
+  // indipendente dalla causa esatta di un eventuale salto nella lettura grezza — applicata a
+  // entrambi gli assi da quando anche il beccheggio (Round 6, `computeAngleExactX`) usa una
+  // formula a range esteso prona a salti di wraparound vicino a ±180°, per lo stesso motivo per
+  // cui la piega ce l'aveva già dal Round 3. 300°/s è generoso rispetto a qualunque piega o
+  // beccheggio reale in marcia normale, anche aggressiva.
   const MAX_LEAN_RATE_DEG_S = 300;
   function clampImplausibleLeanJump(newVal, now){
     if (lastRawRollClampTime === null) { lastRawRollClampTime = now; return newVal; }
@@ -838,6 +860,16 @@
     const maxDelta = MAX_LEAN_RATE_DEG_S * dt;
     const delta = newVal - lastRawRoll;
     if (Math.abs(delta) > maxDelta) return lastRawRoll + Math.sign(delta) * maxDelta;
+    return newVal;
+  }
+  function clampImplausiblePitchJump(newVal, now){
+    if (lastRawPitchClampTime === null) { lastRawPitchClampTime = now; return newVal; }
+    const dt = (now - lastRawPitchClampTime) / 1000;
+    lastRawPitchClampTime = now;
+    if (dt <= 0) return lastRawPitch;
+    const maxDelta = MAX_LEAN_RATE_DEG_S * dt;
+    const delta = newVal - lastRawPitch;
+    if (Math.abs(delta) > maxDelta) return lastRawPitch + Math.sign(delta) * maxDelta;
     return newVal;
   }
   let maxLeanSx = 0, maxLeanDx = 0, maxPitchUp = 0, maxPitchDown = 0, maxGLat = 0, maxGLong = 0;
@@ -940,7 +972,7 @@
   // (accettato per il target iOS, che concede entrambi i permessi con un solo prompt, ma da
   // tenere presente).
   // Ora usato solo per l'heading bussola: piega e beccheggio vengono entrambi da
-  // computeAngleExtY()/computeAngleBoundedX() dentro handleMotion() (vedi sopra) — mai più da
+  // computeAngleExtY()/computeAngleExactX() dentro handleMotion() (vedi sopra) — mai più da
   // deviceorientation.beta/gamma, per lo stesso motivo (gimbal lock) per entrambi.
   function handleOrientation(e){
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) compassHeading = e.webkitCompassHeading;
@@ -1011,16 +1043,19 @@
 
     const angle = getScreenAngle();
 
+    const now = performance.now();
+
     // Round 5 — assegnazione asse→card corretta (vedi commento sopra computeAngleExtY/
-    // computeAngleBoundedX): il beccheggio usa l'asse "bounded" (comp.x), la piega l'asse "esteso"
-    // (comp.y) — l'OPPOSTO di come erano assegnati prima del Round 4 E di come li aveva riassegnati
-    // il Round 4 stesso. Entrambe le sottrazioni offset passano da normalizeAngleDiff() per
-    // sicurezza (vedi sopra).
-    lastRawPitch = computeAngleBoundedX(rx, ry, rz, angle);
+    // computeAngleExactX): il beccheggio usa l'asse X, la piega l'asse Y — l'OPPOSTO di come erano
+    // assegnati prima del Round 4 E di come li aveva riassegnati il Round 4 stesso. Entrambe le
+    // sottrazioni offset passano da normalizeAngleDiff() per sicurezza (vedi sopra). Round 6 —
+    // anche il beccheggio ora passa dal clamp anti-salto (vedi commento su
+    // clampImplausiblePitchJump), da quando la sua formula è tornata alla versione a range esteso
+    // (prona a wraparound) per eliminare l'accoppiamento con la piega.
+    lastRawPitch = clampImplausiblePitchJump(computeAngleExactX(rx, ry, rz, angle), now);
     currentPitch = normalizeAngleDiff(lastRawPitch - pitchOffset);
     updatePitchGauge(currentPitch);
 
-    const now = performance.now();
     lastRawRoll = clampImplausibleLeanJump(computeAngleExtY(rx, ry, rz, angle), now);
     currentLean = normalizeAngleDiff(lastRawRoll - leanOffset);
     updateLeanGauge(currentLean);
@@ -1260,9 +1295,9 @@
     if (lastRawAG) {
       gEst.x = lastRawAG.x; gEst.y = lastRawAG.y; gEst.z = lastRawAG.z;
       // Offset di beccheggio dal vettore grezzo lastRawAG, non da gEst: il beccheggio è ormai
-      // calcolato sempre dal vettore grezzo, mai da gEst. computeAngleBoundedX perché il
-      // beccheggio ora legge quell'asse (vedi Round 5, handleMotion()).
-      pitchOffset = computeAngleBoundedX(lastRawAG.x, lastRawAG.y, lastRawAG.z, getScreenAngle());
+      // calcolato sempre dal vettore grezzo, mai da gEst. computeAngleExactX perché il
+      // beccheggio legge quell'asse (vedi Round 5/6, handleMotion()).
+      pitchOffset = computeAngleExactX(lastRawAG.x, lastRawAG.y, lastRawAG.z, getScreenAngle());
     } else {
       pitchOffset = lastRawPitch;
     }
@@ -1381,5 +1416,3 @@
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBSQER-qCTUsdaoAp0LYanT7Su0sX9OnDk&v=weekly&libraries=places" defer></script>
 </body>
 </html>
-
-
